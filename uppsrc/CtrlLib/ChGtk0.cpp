@@ -585,9 +585,11 @@ int GtkStyleInt(const char *name)
 
 String GtkStyleString(const char *name)
 {
-	const char *h = "";
+	gchar *h;
 	g_object_get(gtk_settings_get_default(), name, &h, NULL);
-	return h;
+	String result = AsString(h);
+	g_free(h);
+	return result;
 }
 
 
