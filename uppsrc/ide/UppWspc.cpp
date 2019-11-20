@@ -285,6 +285,7 @@ void WorkspaceWork::PackageCursor()
 	filelist.WhenBar.Clear();
 	actualpackage = GetActivePackage();
 	repo_dirs = false;
+	git_dirs = false;
 	if(actualpackage.IsEmpty()) return;
 	if(actualpackage == METAPACKAGE) {
 		actual.file.Clear();
@@ -303,7 +304,9 @@ void WorkspaceWork::PackageCursor()
 	filelist.Enable();
 	if(actualpackage != METAPACKAGE)
 		filelist.WhenBar = THISBACK(FileMenu);
+
 	repo_dirs = RepoDirs(true).GetCount();
+	git_dirs = GitDirs(true).GetCount();
 }
 
 Vector<String> WorkspaceWork::RepoDirs(bool actual)
@@ -316,6 +319,21 @@ Vector<String> WorkspaceWork::RepoDirs(bool actual)
 		if(GetRepoKind(d[i]))
 			r.Add(d[i]);
 	return r;
+}
+
+Vector<String> WorkspaceWork::GitDirs(bool actual)
+{
+	Vector<String> d;
+	for(int i = 0; i < package.GetCount(); ++i)
+		d.Add(PackagePath(package[i].name));
+
+	Index<String> r;
+	for(int i = 0; i < d.GetCount(); ++i) {
+		String dir = GetGitRoot(d[i]);
+		if(!dir.IsEmpty())
+			r.FindAdd(dir);
+	}
+	return r.PickKeys();
 }
 
 void WorkspaceWork::FileCursor()
@@ -377,15 +395,18 @@ void WorkspaceWork::AddFile(ADDFILE af)
 	int fci = filelist.GetCursor();
 	int cs = filelist.GetSbPos();
 	int ci = fci >= 0 && fci < fileindex.GetCount() ? fileindex[fci] : -1;
+	Vector<String> files;
 	for(int i = 0; i < fs->GetCount(); i++) {
 		Package::File& f = ci >= 0 ? actual.file.Insert(ci++) : actual.file.Add();
 		f = (*fs)[i];
 		f.readonly = fs->GetReadOnly();
+		files.Add(SourcePath(active, f));
 	}
 	SaveLoadPackage(false);
 	filelist.SetSbPos(cs);
 	filelist.SetCursor(fci >= 0 ? fci : filelist.GetCount() - 1);
 	FileSelected();
+	AddGitFiles(files);
 }
 
 void WorkspaceWork::AddItem(const String& name, bool separator, bool readonly)
@@ -403,7 +424,12 @@ void WorkspaceWork::AddItem(const String& name, bool separator, bool readonly)
 		SaveLoadPackage(false);
 	filelist.SetSbPos(cs);
 	filelist.SetCursor(fci >= 0 ? fci : filelist.GetCount() - 1);
-	FileSelected();
+	if (!separator) {
+		FileSelected();
+		Vector<String> files;
+		files.Add(SourcePath(GetActivePackage(), name));
+		AddGitFiles(files);
+	}
 }
 
 void WorkspaceWork::AddSeparator()
@@ -683,12 +709,18 @@ void WorkspaceWork::DelFile()
 	if(IsFolder(file)) {
 		if(!PromptYesNo("Remove the topic group and discard ALL topics?")) return;
 		RemoveFile();
-		DeleteFolderDeep(file);
+		if (IsGitFile(file))
+			DelGitFile(file);
+		else
+			DeleteFolderDeep(file);
 	}
 	else {
 		if(!PromptYesNo("Remove the file from package and discard it?")) return;
 		RemoveFile();
-		::DeleteFile(file);
+		if (IsGitFile(file))
+			DelGitFile(file);
+		else
+			::DeleteFile(file);
 	}
 }
 
@@ -714,12 +746,18 @@ void WorkspaceWork::RenameFile()
 	if(dlg.Run() != IDOK)
 		return;
 	n = ~dlg.text;
+	dlg.Close();
 	String spath = GetActiveFilePath();
 	String dpath = SourcePath(GetActivePackage(), n);
 	if(!filelist[i].isdir && GetFileLength(spath) >= 0) {
-		if(!::MoveFile(spath, dpath)) {
-			Exclamation("Failed to rename the file.&&" + GetErrorMessage(GetLastError()));
-			return;
+		if(IsGitFile(spath)) {
+			if (!RenameGitFile(spath, dpath))
+				return;
+		} else {
+			if(!::MoveFile(spath, dpath)) {
+				Exclamation("Failed to rename the file.&&" + GetErrorMessage(GetLastError()));
+				return;
+			}
 		}
 	}
 	FileRename(dpath);
@@ -730,6 +768,12 @@ void WorkspaceWork::RenameFile()
 	filelist.SetCursor(i);
 	if(GetFileExt(spath) == ".iml" || GetFileExt(dpath) == ".iml")
 		SyncWorkspace();
+}
+
+void WorkspaceWork::AddGitFiles(const Vector<String>& files)
+{
+	for (int i = 0; i < files.GetCount(); ++i)
+		AddGitFile(files[i]);
 }
 
 WorkspaceWork::Sepfo WorkspaceWork::GetActiveSepfo()
@@ -745,7 +789,7 @@ void WorkspaceWork::GroupOrFile(Point pos)
 		FileSelected();
 }
 
-void   WorkspaceWork::Group()
+void WorkspaceWork::Group()
 {
 	if(!filelist.IsCursor() || !filelist[filelist.GetCursor()].isdir)
 		return;
@@ -777,7 +821,7 @@ void WorkspaceWork::CloseAllGroups()
 	SaveLoadPackage();
 }
 
-void  WorkspaceWork::ShowFile(int pi)
+void WorkspaceWork::ShowFile(int pi)
 {
 	bool open = true;
 	Sepfo sf;
@@ -1035,7 +1079,15 @@ void WorkspaceWork::DeletePackage()
 		return;
 	if(!PromptYesNo("This operation is irreversible.&Do you really want to proceed?"))
 		return;
-	if(!DeleteFolderDeep(GetFileFolder(GetActivePackagePath()))) {
+
+	String pf = GetFileFolder(GetActivePackagePath());
+	bool deleted;
+
+	if (IsGitFile(pf))
+		deleted = DelGitFile(pf);
+	else
+		deleted = DeleteFolderDeep(pf);
+	if(!deleted) {
 		Exclamation("Deleting directory has failed.");
 		return;
 	}
@@ -1135,6 +1187,8 @@ WorkspaceWork::WorkspaceWork()
 	showtime = false;
 	sort = true;
 	repo_dirs = false;
+	git_dirs = false;
+	patchpending = false;
 }
 
 void WorkspaceWork::SerializeClosed(Stream& s)

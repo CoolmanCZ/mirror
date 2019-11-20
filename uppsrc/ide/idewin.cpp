@@ -490,6 +490,11 @@ Ide::Ide()
 
 	macro_api = MacroEditor();
 
+	gitbranchlist.WhenClick = THISBACK(SetGitBranchList);
+	gitbranchlist <<= THISBACK(OnGitBranchList);
+	gitbranchlist.NoDropFocus();
+	gitbranchlist.NoWantFocus();
+
 	mainconfiglist.WhenClick = THISBACK(MainConfig);
 	mainconfiglist <<= THISBACK(OnMainConfigList);
 	mainconfiglist.NoDropFocus();

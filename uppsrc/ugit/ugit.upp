@@ -1,0 +1,40 @@
+description "Simple git GUI frontend, also a module that can be used in other applications\377";
+
+uses
+	CtrlLib,
+	TextDiffCtrl,
+	CodeEditor;
+
+file
+	Git.cpp,
+	Git.h options(BUILDER_OPTION) PCH,
+	GitConfig.cpp,
+	GitConfig.h,
+	GitConfigBranch.cpp,
+	GitConfigBranch.h,
+	GitCommit.cpp,
+	GitCommit.h,
+	GitCommitData.cpp,
+	GitCommitData.h,
+	GitMerge.cpp,
+	GitMerge.h,
+	GitHistory.cpp,
+	GitHistory.h,
+	GitFileHistory.cpp,
+	GitFileHistory.h,
+	GitDiffCtrl.cpp,
+	GitDiffCtrl.h,
+	GitBlame.cpp,
+	GitBlame.h,
+	GitApp.cpp,
+	GitApp.h,
+	Git.lay,
+	Git.iml,
+	Info readonly separator,
+	Copying,
+	srcdoc.tpp,
+	src.tpp;
+
+mainconfig
+	"" = "GUI";
+

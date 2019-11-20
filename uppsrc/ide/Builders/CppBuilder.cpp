@@ -420,6 +420,44 @@ String CppBuilder::IncludesShort(const char *sep, const String& package, const P
 	return cc;
 }
 
+bool IsGitDir2(const String& p)
+{ // this is a cope of ugit/IsGitDir to avoid modular issues
+	if(IsNull(p))
+		return false;
+	if(DirectoryExists(AppendFileName(p, ".git")))
+		return true;
+	String path = p;
+	String path0;
+	while(path != path0) {
+		path0 = path;
+		path = GetFileFolder(path);
+		if(DirectoryExists(AppendFileName(path, ".git")))
+			return true;
+	}
+	return false;
+}
+
+Vector<String> GitInfo(const String& package)
+{
+	Vector<String> info;
+	String d = GetFileFolder(PackagePath(package));
+	if(IsGitDir2(d)) {
+		String command = "git -C " << d << " log -n 1 --pretty=format:\"\%h\"";
+		String v = Sys(command);
+		if(!v.IsEmpty())
+			info.Add("#define bmGIT_REVISION " + AsCString(TrimBoth(v)));
+		command = "git -C " << d << " rev-parse --abbrev-ref HEAD";
+		v = Sys(command);
+		command = "git -C " << d << " config --local branch." << TrimBoth(v) << ".remote";
+		v = Sys(command);
+		command = "git -C " << d << " config --local remote." << TrimBoth(v) << ".url";
+		v = Sys(command);
+		if(!v.IsEmpty())
+			info.Add("#define bmGIT_URL " + AsCString(TrimBoth(v)));
+	}
+	return info;
+}
+
 bool IsSvnDir2(const String& p)
 { // this is a cope of usvn/IsSvnDir to avoid modular issues
 	if(IsNull(p))
@@ -475,8 +513,10 @@ void CppBuilder::SaveBuildInfo(const String& package)
 	info << "#define bmMACHINE " << AsCString(GetComputerName()) << "\r\n";
 	info << "#define bmUSER    " << AsCString(GetUserName()) << "\r\n";
 
-	if(package == mainpackage)
+	if(package == mainpackage) {
 		info << Join(SvnInfo(package), "\r\n");
+		info << Join(GitInfo(package), "\r\n");
+	}
 }
 
 String CppBuilder::DefinesTargetTime(const char *sep, const String& package, const Package& pkg)

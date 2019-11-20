@@ -424,6 +424,7 @@ void Ide::FlushFile() {
 	editfile_repo = NOT_REPO_DIR;
 	editfile_isfolder = false;
 	repo_dirs = RepoDirs(true).GetCount(); // Perhaps not the best place, but should be ok
+	git_dirs = GitDirs(true).GetCount();
 	editor.Clear();
 	editor.Disable();
 	editor.SetEditable();
@@ -479,9 +480,13 @@ void Ide::EditFile0(const String& path, byte charset, int spellcheck_comments, c
 	editor.SpellcheckComments(spellcheck_comments);
 	AddLru();
 
+	editfile_repo = GetRepoKind(editfile);
 	editfile_isfolder = IsFolder(editfile) || IsHelpName(editfile);
 	repo_dirs = RepoDirs(true).GetCount(); // Perhaps not the best place, but should be ok
-	
+	git_dirs = GitDirs(true).GetCount();
+	if (editfile_repo == GIT_DIR)
+		SyncGitBranchList();
+
 	bool candesigner = !(debugger && !editfile_isfolder && (PathIsEqual(path, posfile[0]) || PathIsEqual(path, posfile[0])))
 	   && editastext.Find(path) < 0 && editashex.Find(path) < 0 && !IsNestReadOnly(editfile);
 	
@@ -612,6 +617,7 @@ void Ide::EditFile0(const String& path, byte charset, int spellcheck_comments, c
 			editor.SetCursor(editor.GetPos64(1));
 		}
 		editor.SetCharset(tfile ? CHARSET_UTF8 : charset);
+		SaveFile(true);
 	}
 	editor.SetFocus();
 	MakeTitle();
@@ -621,7 +627,6 @@ void Ide::EditFile0(const String& path, byte charset, int spellcheck_comments, c
 	editor.CheckEdited(true);
 	editor.Annotate(editfile);
 	editor.SyncNavigator();
-	editfile_repo = GetRepoKind(editfile);
 	editfile_includes = IncludesMD5();
 }
 

@@ -22,33 +22,98 @@ bool RenamePackageFs(const String& upp, const String& npf, const String& nupp, b
 {
 	String pf = GetFileFolder(upp);
 	String temp_pf = AppendFileName(GetFileFolder(pf), AsString(Random()) + AsString(Random()));
-	if(!FileMove(pf, temp_pf)) {
-		Exclamation("Operation has failed.");
-		return false;
-	}
-	RealizePath(GetFileFolder(npf));
-	if(copy) {
-		bool b = CopyFolder(npf, temp_pf);
-		FileMove(temp_pf, pf);
-		if(!b) {
-			FileMove(temp_pf, pf);
-			DeleteFolderDeep(npf);
-			Exclamation("Duplicating package folder has failed.");
+	if (IsGitFile(pf)) {
+		if(!RenameGitFile(pf, temp_pf)) {
+			Exclamation("Operation has failed.");
 			return false;
 		}
+		if(copy) {
+			bool b = CopyFolder(npf, temp_pf);
+			RenameGitFile(temp_pf, pf);
+			if(!b) {
+				if (IsGitFile(npf))
+					DelGitFile(npf);
+				else
+					DeleteFolderDeep(npf);
+				Exclamation("Duplicating package folder has failed.");
+				return false;
+			}
+			if(IsGitDir(npf))
+				AddGitFile(npf);
+		}
+		else
+		if(!RenameGitFile(temp_pf, npf)) {
+			RenameGitFile(temp_pf, pf);
+			Exclamation("Renaming package folder has failed.");
+			return false;
+		}
+		if(!RenameGitFile(npf + "/" + GetFileName(upp), nupp)) {
+			RenameGitFile(npf, pf);
+			Exclamation("Renaming .upp file has failed.");
+			return false;
+		}
+		return true;
 	}
-	else
-	if(!FileMove(temp_pf, npf)) {
-		FileMove(temp_pf, pf);
-		Exclamation("Renaming package folder has failed.");
-		return false;
+	else {
+		if(!FileMove(pf, temp_pf)) {
+			Exclamation("Operation has failed.");
+			return false;
+		}
+		RealizePath(GetFileFolder(npf));
+		if(copy) {
+			bool b = CopyFolder(npf, temp_pf);
+			FileMove(temp_pf, pf);
+			if(!b) {
+				FileMove(temp_pf, pf);
+				DeleteFolderDeep(npf);
+				Exclamation("Duplicating package folder has failed.");
+				return false;
+			}
+		}
+		else
+		if(!FileMove(temp_pf, npf)) {
+			FileMove(temp_pf, pf);
+			Exclamation("Renaming package folder has failed.");
+			return false;
+		}
+		if(!FileMove(npf + "/" + GetFileName(upp), nupp)) {
+			FileMove(npf, pf);
+			Exclamation("Renaming .upp file has failed.");
+			return false;
+		}
+		return true;
 	}
-	if(!FileMove(npf + "/" + GetFileName(upp), nupp)) {
-		FileMove(npf, pf);
-		Exclamation("Renaming .upp file has failed.");
-		return false;
+}
+
+void AddGitFile(const String& file)
+{
+	Git git;
+
+	git.SetGitDir(GetGitRoot(file)).AddToRepository(file).ProcessCommandOutput();
+}
+
+bool DelGitFile(const String& file)
+{
+	Git git;
+
+	git.SetGitDir(GetGitRoot(file)).DelFromRepository(file);
+	if (git.IsOutput()) {
+		git.ProcessCommandOutput();
+		return (false);
 	}
-	return true;
+	return (true);
+}
+
+bool RenameGitFile(const String& spath, const String& dpath)
+{
+	Git git;
+
+	git.SetGitDir(GetGitRoot(spath)).RenameInRepository(spath, dpath);
+	if (git.IsOutput()) {
+		git.ProcessCommandOutput();
+		return (false);
+	}
+	return (true);
 }
 
 bool RenamePackageFs(const String& upp, const String& newname, bool duplicate)
@@ -156,7 +221,10 @@ void SelectPackageDlg::DeletePackage()
 		return;
 	if(!PromptYesNo("This operation is irreversible.&Do you really want to proceed?"))
 		return;
-	DeleteFolderDeep(pp);
+	if (IsGitDir(pp))
+		DelGitFile(pp);
+	else
+		DeleteFolderDeep(pp);
 	Load();
 }
 
@@ -375,6 +443,8 @@ void SelectPackageDlg::OnNew() {
 			Exclamation("Error writing the file [* \1" + path + "\1].");
 			continue;
 		}
+		if(IsGitDir(path))
+			AddGitFile(path);
 		dlg.Create();
 		selected = name;
 		Break(IDYES);

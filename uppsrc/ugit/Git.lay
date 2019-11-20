@@ -1,0 +1,158 @@
+LAYOUT(GitConfigParamLayout1, 540, 56)
+	ITEM(StaticText, param1text, SetText(t_("Parameter name:")).SetAlign(ALIGN_RIGHT).LeftPosZ(4, 88).TopPosZ(4, 20))
+	ITEM(EditString, param1, HSizePosZ(96, 4).TopPosZ(4, 20))
+	ITEM(Button, ok, SetLabel(t_("OK")).RightPosZ(72, 64).BottomPosZ(4, 24))
+	ITEM(Button, cancel, SetLabel(t_("Cancel")).RightPosZ(4, 64).BottomPosZ(4, 24))
+END_LAYOUT
+
+LAYOUT(GitConfigParamLayout2, 540, 80)
+	ITEM(StaticText, param1text, SetText(t_("Parameter name:")).SetAlign(ALIGN_RIGHT).LeftPosZ(4, 88).TopPosZ(4, 20))
+	ITEM(EditString, param1, HSizePosZ(96, 4).TopPosZ(4, 20))
+	ITEM(StaticText, param2text, SetText(t_("Parameter value:")).SetAlign(ALIGN_RIGHT).LeftPosZ(4, 88).TopPosZ(28, 19))
+	ITEM(EditString, param2, HSizePosZ(96, 4).TopPosZ(28, 20))
+	ITEM(Button, ok, SetLabel(t_("OK")).RightPosZ(72, 64).BottomPosZ(4, 24))
+	ITEM(Button, cancel, SetLabel(t_("Cancel")).RightPosZ(4, 64).BottomPosZ(4, 24))
+END_LAYOUT
+
+LAYOUT(GitConfigDropListLayout, 320, 76)
+	ITEM(LabelBox, text, SetLabel(t_("GIT directory")).HSizePosZ(4, 4).TopPosZ(4, 40))
+	ITEM(DropList, dir, HSizePosZ(12, 8).TopPosZ(20, 19))
+	ITEM(Button, ok, SetLabel(t_("OK")).RightPosZ(72, 64).BottomPosZ(4, 24))
+	ITEM(Button, cancel, SetLabel(t_("Cancel")).RightPosZ(4, 64).BottomPosZ(4, 24))
+END_LAYOUT
+
+LAYOUT(GitConfigLayout, 540, 240)
+	ITEM(LabelBox, labelbox, SetLabel(t_("Global")).HSizePosZ(0, 0).TopPosZ(0, 92))
+	ITEM(StaticText, dv___1, SetText(t_("User name:")).SetAlign(ALIGN_RIGHT).LeftPosZ(4, 60).TopPosZ(16, 19))
+	ITEM(EditString, gituser, HSizePosZ(68, 8).TopPosZ(16, 19))
+	ITEM(StaticText, dv___3, SetText(t_("E-mail:")).SetAlign(ALIGN_RIGHT).LeftPosZ(4, 60).TopPosZ(40, 19))
+	ITEM(EditString, gitemail, HSizePosZ(68, 8).TopPosZ(40, 19))
+	ITEM(StaticText, coreeol, SetText(t_("Line ending:")).SetAlign(ALIGN_RIGHT).LeftPosZ(4, 60).TopPosZ(68, 19))
+	ITEM(DropList, coreeoldl, LeftPosZ(68, 72).TopPosZ(68, 19))
+	ITEM(StaticText, coreautocrlf, SetText(t_("Auto CRLF:")).SetAlign(ALIGN_RIGHT).LeftPosZ(148, 60).TopPosZ(68, 19))
+	ITEM(DropList, coreautocrlfdl, LeftPosZ(212, 72).TopPosZ(68, 19))
+	ITEM(ArrayCtrl, parameters, HSizePosZ(0, 0).VSizePosZ(96, 0))
+END_LAYOUT
+
+LAYOUT(GitConfigBranchAddLayout, 540, 104)
+	ITEM(StaticText, param1text, SetText(t_("Parameter name:")).SetAlign(ALIGN_RIGHT).LeftPosZ(4, 88).TopPosZ(4, 20))
+	ITEM(EditString, param1, HSizePosZ(96, 4).TopPosZ(4, 20))
+	ITEM(StaticText, param2text, SetText(t_("Parameter value:")).SetAlign(ALIGN_RIGHT).LeftPosZ(4, 88).TopPosZ(28, 19))
+	ITEM(EditString, param2, HSizePosZ(96, 4).TopPosZ(28, 20))
+	ITEM(StaticText, idtext, SetText(t_("Start point:")).SetAlign(ALIGN_RIGHT).LeftPosZ(4, 88).TopPosZ(52, 19))
+	ITEM(DropList, id, HSizePosZ(96, 4).TopPosZ(52, 20))
+	ITEM(Option, opt, SetLabel(t_("Checkout new branch")).LeftPosZ(4, 124).BottomPosZ(8, 16))
+	ITEM(Button, ok, SetLabel(t_("OK")).RightPosZ(72, 64).BottomPosZ(4, 24))
+	ITEM(Button, cancel, SetLabel(t_("Cancel")).RightPosZ(4, 64).BottomPosZ(4, 24))
+END_LAYOUT
+
+LAYOUT(GitConfigBranchLayout, 540, 176)
+	ITEM(StaticText, dv___0, SetText(t_("Branch name:")).SetAlign(ALIGN_RIGHT).LeftPosZ(8, 80).TopPosZ(12, 19))
+	ITEM(DropList, branchdl, HSizePosZ(92, 268).TopPosZ(12, 19))
+	ITEM(Button, branchadd, SetLabel(t_("Add")).Tip(t_("Add new local branch")).RightPosZ(200, 60).TopPosZ(12, 20))
+	ITEM(Button, branchmod, SetLabel(t_("Modify")).Tip(t_("Change local branch parameters")).RightPosZ(136, 60).TopPosZ(12, 20))
+	ITEM(Button, branchdel, SetLabel(t_("Delete")).Tip(t_("Delete local branch")).RightPosZ(72, 60).TopPosZ(12, 20))
+	ITEM(Button, branchcheckout, SetLabel(t_("Checkout")).Tip(t_("Checkout local branch")).RightPosZ(8, 60).TopPosZ(12, 20))
+	ITEM(Button, branchpushremote, SetLabel(t_("Push to remote")).Tip(t_("Push branch to the selected remote repository")).RightPosZ(168, 92).TopPosZ(36, 20))
+	ITEM(Button, branchdelremote, SetLabel(t_("Delete at remote")).Tip(t_("Delete branch at the selected remote repository")).RightPosZ(168, 92).TopPosZ(124, 20))
+	ITEM(StaticText, dv___8, SetText(t_("Description:")).SetAlign(ALIGN_RIGHT).LeftPosZ(8, 80).TopPosZ(60, 19))
+	ITEM(StaticText, branchdesc, SetFrame(ThinInsetFrame()).HSizePosZ(92, 8).TopPosZ(60, 19))
+	ITEM(StaticText, dv___10, SetText(t_("Remote:")).SetAlign(ALIGN_RIGHT).LeftPosZ(8, 80).TopPosZ(100, 19))
+	ITEM(DropList, remotesdl, HSizePosZ(92, 268).TopPosZ(100, 19))
+	ITEM(Button, remoteadd, SetLabel(t_("Add")).Tip(t_("Add new remote repository")).RightPosZ(200, 60).TopPosZ(100, 20))
+	ITEM(Button, remotemod, SetLabel(t_("Modify")).Tip(t_("Change remote repository parameters")).RightPosZ(136, 60).TopPosZ(100, 20))
+	ITEM(Button, remotedel, SetLabel(t_("Delete")).Tip(t_("Delete remote repository")).RightPosZ(72, 60).TopPosZ(100, 20))
+	ITEM(Button, remotemirror, SetLabel(t_("Mirror")).Tip(t_("Mirror remote branches to the local repository")).RightPosZ(8, 60).TopPosZ(100, 20))
+	ITEM(StaticText, dv___16, SetText(t_("Remote merge:")).SetAlign(ALIGN_RIGHT).LeftPosZ(8, 80).TopPosZ(124, 19))
+	ITEM(DropList, remotemergedl, HSizePosZ(92, 268).TopPosZ(124, 19))
+	ITEM(StaticText, dv___18, SetText(t_("Remote URL:")).SetAlign(ALIGN_RIGHT).LeftPosZ(8, 80).TopPosZ(148, 19))
+	ITEM(StaticText, remoteurl, SetFrame(ThinInsetFrame()).HSizePosZ(92, 8).TopPosZ(148, 18))
+	ITEM(Label, dv___20, SetFrame(BottomSeparatorFrame()).HSizePosZ(0, 0).TopPosZ(4, 88))
+END_LAYOUT
+
+LAYOUT(GitTabsLayout, 540, 240)
+	ITEM(TabCtrl, tabs, HSizePosZ(4, 4).VSizePosZ(4, 32))
+	ITEM(Button, close, SetLabel(t_("Close")).RightPosZ(4, 64).BottomPosZ(4, 24))
+END_LAYOUT
+
+LAYOUT(GitCmdOutputLayout, 540, 200)
+	ITEM(Button, ok, SetLabel(t_("OK")).RightPosZ(76, 64).BottomPosZ(4, 24))
+	ITEM(Button, close, SetLabel(t_("Close")).RightPosZ(4, 64).BottomPosZ(4, 24))
+	ITEM(ArrayCtrl, cmd, AutoHideSb(true).HSizePosZ(4, 4).VSizePosZ(4, 32))
+	ITEM(StaticText, status, HSizePosZ(4, 144).BottomPosZ(4, 24))
+END_LAYOUT
+
+LAYOUT(GitSplitterLayout, 768, 512)
+	ITEM(Splitter, splitter, HSizePosZ(4, 4).VSizePosZ(4, 32))
+	ITEM(StaticText, status, LeftPosZ(4, 608).BottomPosZ(4, 24))
+	ITEM(Button, ok, SetLabel(t_("OK")).RightPosZ(80, 64).BottomPosZ(4, 24))
+	ITEM(Button, close, SetLabel(t_("Close")).RightPosZ(4, 64).BottomPosZ(4, 24))
+END_LAYOUT
+
+LAYOUT(GitMergeBranchesLayout, 160, 276)
+	ITEM(DropList, local, Tip(t_("Merge to")).HSizePosZ(0, 0).TopPosZ(0, 19))
+	ITEM(DropList, remote, Tip(t_("Merge from")).HSizePosZ(0, 0).TopPosZ(20, 19))
+	ITEM(Option, commit, SetLabel(t_("Commit")).Tip(t_("Perform the merge and commit the result.")).RightPosZ(56, 60).BottomPosZ(0, 16))
+	ITEM(Option, noff, SetLabel(t_("No FF")).Tip(t_("Create a merge commit even when the merge resolves as a fast-forward.")).RightPosZ(0, 52).BottomPosZ(0, 16))
+	ITEM(ArrayCtrl, files, HSizePosZ(0, 0).VSizePosZ(40, 18))
+END_LAYOUT
+
+LAYOUT(GitCommitFilesLayout, 160, 276)
+	ITEM(ArrayCtrl, statuslist, HSizePosZ(0, 0).VSizePosZ(0, 18))
+	ITEM(Switch, difftype, SetLabel(t_("index\ncached\nHEAD")).HSizePosZ(16, 4).BottomPosZ(0, 16))
+END_LAYOUT
+
+LAYOUT(GitCommitLayout, 540, 240)
+	ITEM(LabelBox, dv___0, HSizePosZ(0, 0).TopPosZ(0, 28))
+	ITEM(StaticText, text, SetText(t_("Remote status:")).SetAlign(ALIGN_RIGHT).LeftPosZ(4, 92).TopPosZ(4, 20))
+	ITEM(StaticText, remotestatus, HSizePosZ(100, 4).TopPosZ(4, 20))
+	ITEM(Splitter, splitter, HSizePosZ(0, 0).VSizePosZ(32, 0))
+END_LAYOUT
+
+LAYOUT(GitCommittingLayout, 756, 512)
+	ITEM(Button, close, SetLabel(t_("Close")).RightPosZ(4, 64).BottomPosZ(4, 24))
+	ITEM(TabCtrl, tabs, HSizePosZ(4, 4).VSizePosZ(4, 32))
+	ITEM(Option, commitall, SetLabel(t_("Commit changes in all repositories at once")).HSizePosZ(4, 432).BottomPosZ(4, 24))
+	ITEM(Button, fetch, Tip(t_("Fetch branches and/or tags from the repository")).RightPosZ(224, 24).BottomPosZ(4, 24))
+	ITEM(Button, stash, Tip(t_("Stash changes in the selected GIT directory")).RightPosZ(196, 24).BottomPosZ(4, 24))
+	ITEM(Button, stashapply, Tip(t_("Apply stashed changes in the selected GIT directory")).RightPosZ(168, 24).BottomPosZ(4, 24))
+	ITEM(Button, ok, SetLabel(t_("OK")).RightPosZ(72, 64).BottomPosZ(4, 24))
+	ITEM(Button, savediff, SetLabel(t_("Save diff")).RightPosZ(252, 64).BottomPosZ(4, 24))
+END_LAYOUT
+
+LAYOUT(GitCommitDataLayout, 540, 112)
+	ITEM(StaticText, tree, SetText(t_("commit:")).SetAlign(ALIGN_RIGHT).SetFont(StdFont().Bold()).LeftPosZ(0, 72).TopPosZ(0, 15))
+	ITEM(StaticText, treeval, HSizePosZ(76, 224).TopPosZ(0, 15))
+	ITEM(StaticText, parent, SetText(t_("parent:")).SetAlign(ALIGN_RIGHT).SetFont(StdFont().Bold()).LeftPosZ(0, 72).TopPosZ(16, 15))
+	ITEM(StaticText, parentval, HSizePosZ(76, 0).TopPosZ(16, 15))
+	ITEM(StaticText, parentfile, SetAlign(ALIGN_RIGHT).RightPosZ(0, 220).TopPosZ(0, 15))
+	ITEM(StaticText, author, SetText(t_("author:")).SetAlign(ALIGN_RIGHT).SetFont(StdFont().Bold()).LeftPosZ(0, 72).TopPosZ(32, 15))
+	ITEM(StaticText, authorval, HSizePosZ(76, 116).TopPosZ(32, 15))
+	ITEM(StaticText, authortime, SetAlign(ALIGN_RIGHT).RightPosZ(0, 112).TopPosZ(32, 15))
+	ITEM(StaticText, committer, SetText(t_("committer:")).SetAlign(ALIGN_RIGHT).SetFont(StdFont().Bold()).LeftPosZ(0, 72).TopPosZ(48, 15))
+	ITEM(StaticText, committerval, HSizePosZ(76, 116).TopPosZ(48, 15))
+	ITEM(StaticText, committertime, SetAlign(ALIGN_RIGHT).RightPosZ(0, 112).TopPosZ(48, 15))
+	ITEM(DocEdit, summary, SetFrame(ThinInsetFrame()).WantFocus(false).SetEditable(false).HSizePosZ(0, 0).VSizePosZ(64, 0))
+END_LAYOUT
+
+LAYOUT(GitCommitMessageLayout, 540, 440)
+	ITEM(LineEdit, message, HSizePosZ(4, 4).VSizePosZ(4, 32))
+	ITEM(Button, close, SetLabel(t_("Close")).RightPosZ(4, 64).BottomPosZ(4, 24))
+	ITEM(Button, ok, SetLabel(t_("OK")).RightPosZ(72, 64).BottomPosZ(4, 24))
+END_LAYOUT
+
+LAYOUT(GitHistoryLayout, 540, 228)
+	ITEM(Splitter, splitter, HSizePosZ(0, 0).VSizePosZ(0, 20))
+	ITEM(Option, firstparent, SetLabel(t_("Follow only the first parent commit upon seeing a merge commit")).HSizePosZ(0, 168).BottomPosZ(0, 20))
+	ITEM(Switch, showdiff, SetLabel(t_("Show commit\nShow diff")).RightPosZ(0, 160).BottomPosZ(0, 20))
+END_LAYOUT
+
+LAYOUT(GitPatchLayout, 540, 80)
+	ITEM(StaticText, gitdirtext, SetText(t_("GIT repository:")).LeftPosZ(4, 84).TopPosZ(4, 19))
+	ITEM(DropList, gitdir, HSizePosZ(92, 4).TopPosZ(4, 19))
+	ITEM(StaticText, patchtext, SetText(t_("Patch file:")).LeftPosZ(4, 84).TopPosZ(28, 19))
+	ITEM(EditField, patchfile, HSizePosZ(92, 4).TopPosZ(28, 19))
+	ITEM(Button, ok, SetLabel(t_("OK")).RightPosZ(72, 64).BottomPosZ(4, 24))
+	ITEM(Button, cancel, SetLabel(t_("Cancel")).RightPosZ(4, 64).BottomPosZ(4, 24))
+END_LAYOUT
+

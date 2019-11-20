@@ -14,7 +14,7 @@
 String SplashCtrl::GenerateVersionInfo(char separator)
 {
 	String h;
-	
+
 	h << "Version: " << GenerateVersionNumber();
 	h << separator;
 	if(sizeof(void *) == 8)
@@ -52,6 +52,8 @@ String SplashCtrl::GenerateVersionNumber()
 {
 #ifdef bmSVN_REVISION
 	return bmSVN_REVISION;
+#elif defined bmGIT_REVISION
+	return bmGIT_REVISION;
 #else
 	return IDE_VERSION;
 #endif

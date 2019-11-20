@@ -247,6 +247,8 @@ void TemplateDlg::Create()
 				fn = AppendFileName(AppendFileName(~nest, (String)~package), fn);
 				RealizePath(fn);
 				SaveFile(fn, Expand(ft.text, var));
+				if(IsGitDir(fn))
+					AddGitFile(fn);
 			}
 		}
 	}
@@ -255,6 +257,8 @@ void TemplateDlg::Create()
 	p.Load(f);
 	p.description = ~description;
 	p.Save(f);
+	if(IsGitDir(f))
+		AddGitFile(f);
 }
 
 void TemplateDlg::Inits()

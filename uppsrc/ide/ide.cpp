@@ -121,6 +121,7 @@ void Ide::SetMain(const String& package)
 	SyncMainConfigList();
 	AdjustMainConfig();
 	SyncBuildMode();
+	SyncGitBranchList();
 	SetHdependDirs();
 	SetBar();
 	HideBottom();

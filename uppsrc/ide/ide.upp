@@ -20,6 +20,7 @@ uses
 	ide/Android,
 	ide/Java,
 	ide/MacroManager,
+	ugit,
 	urepo,
 	Report;
 
@@ -86,6 +87,7 @@ file
 	Qtf.cpp,
 	Xml.cpp,
 	Json.cpp,
+	Git.cpp,
 	MacroManager.cpp,
 	SetupSVN.cpp,
 	Upgrade.cpp,

@@ -1,0 +1,37 @@
+language: cpp
+
+cache: ccache
+
+compiler: clang
+
+dist: trusty
+
+sudo: required
+
+os: linux
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - g++-4.9
+
+# safelist
+branches:
+  only:
+  - master
+  - develop
+
+before_install:
+  - sudo apt-get -y install libbz2-dev libfreetype6-dev libpng12-dev gtk2.0-dev libnotify-dev libssl-dev libsdl-dev
+
+script:
+  - ./generate_cmake_ide.sh
+  - mkdir build.ide
+  - cd build.ide
+  - cmake -DCMAKE_TOOLCHAIN_FILE=../upp_cmake/utils/toolchain-clang.cmake .. && make -j $(nproc)
+  - cd ..
+
+after_success:
+  - ./build.ide/bin/ide --version
+  - ./build.ide/bin/ide --help

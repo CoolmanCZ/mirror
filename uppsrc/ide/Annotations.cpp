@@ -164,7 +164,8 @@ void AssistEditor::NewTopic(String group, String coderef)
 		return;
 	String ef = theide->editfile;
 	String n = GetFileTitle(ef);
-	theide->EditFile(AppendFileName(PackageDirectory(theide->GetActivePackage()), group + ".tpp"));
+	String fn = AppendFileName(PackageDirectory(theide->GetActivePackage()), group + ".tpp");
+	theide->EditFile(fn);
 	if(!theide->designer)
 		return;
 	TopicEditor *te = dynamic_cast<TopicEditor *>(&theide->designer->DesignerCtrl());
@@ -174,6 +175,8 @@ void AssistEditor::NewTopic(String group, String coderef)
 	SplitCodeRef(coderef, scope, item);
 	if(!te->NewTopicEx(IsNull(scope) ? n : Join(Split(scope, ':'), "_"), coderef))
 		theide->EditFile(ef);
+	if (IsGitDir(fn))
+		AddGitFile(fn);
 }
 
 void AssistEditor::EditAnnotation(bool fastedit)
