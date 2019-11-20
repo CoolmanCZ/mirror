@@ -10,6 +10,8 @@ TextDiffCtrl::TextDiffCtrl()
 {
 	left.SetLeft();
 	left.Gutter(30);
+	left.SetDiffBgColor(GreenDiffBg());
+	left.SetDiffBgColorBold(GreenDiffBgBold());
 	right.NoGutter();
 	Horz(left, right);
 	left.WhenScroll = right.ScrollWhen(left);
@@ -125,9 +127,23 @@ void DiffDlg::Execute(const String& f)
 
 void DiffDlg::Write()
 {
-	if(PromptYesNo("Do you want to overwrite&[* " + DeQtf(editfile) + "] ?")) {
-		SaveFile(editfile, extfile);
-		Break(IDOK);
+	if (FileExists(editfile)) {
+		if (extfile.GetCount()) {
+			if (PromptYesNo("Do you want to overwrite&[* " + DeQtf(editfile) + "] ?")) {
+				SaveFile(editfile, extfile);
+				Break(IDOK);
+			}
+		} else {
+			if (PromptYesNo("Do you want to delete&[* " + DeQtf(editfile) + "] ?")) {
+				DeleteFile(editfile);
+				Break(IDOK);
+			}
+		}
+	} else {
+		if (PromptYesNo("Do you want to create&[* " + DeQtf(editfile) + "] ?")) {
+			SaveFile(editfile, extfile);
+			Break(IDOK);
+		}
 	}
 }
 

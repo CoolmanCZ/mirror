@@ -2,9 +2,6 @@
 
 namespace Upp {
 
-
-inline Color HistoryBg() { return Color(255, 255, 0); }
-
 TextCompareCtrl::TextCompareCtrl()
 {
 	letter = Size(1, 1);
@@ -21,6 +18,8 @@ TextCompareCtrl::TextCompareCtrl()
 	gutter_width = 0;
 	gutter_bg = AdjustIfDark(Color(151, 190, 239));
 	gutter_fg = SGreen;
+	diff_bg = RedDiffBg();
+	diff_bg_bold = RedDiffBgBold();
 	cursor = anchor = Null;
 	gutter_capture = false;
 	show_line_number = true;
@@ -195,7 +194,7 @@ bool TextCompareCtrl::LineDiff(bool left, Vector<LineEdit::Highlight>& hln, Colo
 	int p2 = 0;
 	int matchlen = 0;
 	int subscore = 0; // prefer matches that are not in words
-	
+
 	for(int pos1 = l1; pos1 < h1; pos1++)
 		for(int pos2 = l2; pos2 < h2; pos2++) {
 			int ml = GetMatchLen(s1 + pos1, s2 + pos2, min(h1 - pos1, h2 - pos2));
@@ -212,7 +211,7 @@ bool TextCompareCtrl::LineDiff(bool left, Vector<LineEdit::Highlight>& hln, Colo
 				}
 			}
 		}
-	
+
 	if(matchlen > 1 || matchlen && !IsAlNum(s1[p1])) {
 		for(int i = 0; i < matchlen; i++)
 			hln[(left ? p1 : p2) + i].paper = eq_color;
@@ -263,19 +262,17 @@ void TextCompareCtrl::Paint(Draw& draw)
 		draw.DrawRect(gx, ty, 2, by - ty, Black);
 		draw.DrawRect(gx + gutter_width - 2, ty, 2, by - ty, Black);
 	}
-	
-	Color diffpaper = SYellow;
 
 	int n_width = show_line_number ? number_width : 0;
 	if(show_line_number) {
 		for(int i = first_line; i <= last_line; i++) {
 			const Line& l = lines[i];
 			int y = i * letter.cy - offset.cy;
-			Color paper = IsNull(l.number) ? LtGray() : l.diff ? diffpaper : SColorPaper();
-			Color ink = l.diff ? SRed(): SGray();
+			Color paper = IsNull(l.number) ? LtGray() : l.diff ? GetDiffBgColorBold() : SColorPaper();
+			Color ink = l.diff ? Red(): Gray();
 			draw.DrawRect(0, y, n_width, letter.cy, paper);
 			draw.DrawRect(n_width - 1, y, 1, letter.cy, Gray());
-			if(!IsNull(l.number))
+			if(!IsNull(l.number) && (l.number_diff > 0))
 				draw.DrawText(0, y + number_yshift, FormatInt(l.number_diff), number_font, ink);
 		}
 	}
@@ -287,7 +284,7 @@ void TextCompareCtrl::Paint(Draw& draw)
 		const Line& l = lines[i];
 		int y = i * letter.cy - offset.cy;
 		Color ink = SColorText();
-		Color paper = IsNull(l.number) ? LtGray() : l.diff ? diffpaper : SColorPaper();
+		Color paper = IsNull(l.number) ? LtGray() : l.diff ? GetDiffBgColorBold() : SColorPaper();
 		bool sel = l.number >= sell && l.number <= selh;
 		if(sel) {
 			ink = SColorHighlightText;
@@ -302,12 +299,12 @@ void TextCompareCtrl::Paint(Draw& draw)
 		hln.SetCount(ln.GetCount() + 1);
 		for(int i = 0; i < hln.GetCount(); i++) {
 			LineEdit::Highlight& h = hln[i];
-			h.paper = sel ? paper : diffpaper;
+			h.paper = sel ? paper : GetDiffBgColorBold();
 			h.ink = ink;
 			h.chr = ln[i];
 			h.font = StdFont();
 		}
-		
+
 		bool ldiff = false;
 
 		if(!sel) {
@@ -323,11 +320,11 @@ void TextCompareCtrl::Paint(Draw& draw)
 				ln_diff = ExpandTabs(ln_diff);
 				if(ln_diff.GetCount() * ln.GetCount() < 50000) {
 					if(left)
-						ldiff = LineDiff(true, hln, SColorPaper(),
-						                 ~ln, 0, ln.GetCount(), ~ln_diff, 0, ln_diff.GetCount(), 0);
+						ldiff = LineDiff(true, hln, GetDiffBgColor(),
+						         ~ln, 0, ln.GetCount(), ~ln_diff, 0, ln_diff.GetCount(), 0);
 					else
-						ldiff = LineDiff(false, hln, SColorPaper(),
-						                 ~ln_diff, 0, ln_diff.GetCount(), ~ln, 0, ln.GetCount(), 0);
+						ldiff = LineDiff(false, hln, GetDiffBgColor(),
+						         ~ln_diff, 0, ln_diff.GetCount(), ~ln, 0, ln.GetCount(), 0);
 				}
 			}
 			if(show_white_space) {
@@ -341,7 +338,7 @@ void TextCompareCtrl::Paint(Draw& draw)
 						break;
 				}
 			}
-			
+
 			if(ldiff)
 				paper = SColorPaper();
 		}
@@ -382,7 +379,7 @@ void TextCompareCtrl::SetFont(Font f, Font nf)
 	FontInfo ni = nf.Info();
 	letter.cy = fi.GetHeight();
 	letter.cx = fi.GetAveWidth();
-	number_width = 5 * ni.GetAveWidth();
+	number_width = 5 * ni.GetAveWidth() + 2;
 	number_yshift = (fi.GetHeight() - ni.GetHeight() + 2) >> 1;
 	Layout();
 }
@@ -432,6 +429,7 @@ void TextCompareCtrl::Set(int line, String text, bool diff, int number, int leve
 	l.level = level;
 	l.text_diff = text_diff;
 	l.number_diff = number_diff;
+	l.left = left;
 	if(rl)
 		UpdateWidth();
 	else if(tl > maxwidth) {
