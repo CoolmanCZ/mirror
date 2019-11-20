@@ -8,6 +8,8 @@ flags(NOTMFC) "!GUI !CONSOLE";
 uses
 	Sql;
 
+library(LINUX) dl;
+
 options
 	"-DSQLITE_CORE -DSQLITE_ENABLE_FTS4 -DSQLITE_ENABLE_FTS3_PARENTHESIS";
 

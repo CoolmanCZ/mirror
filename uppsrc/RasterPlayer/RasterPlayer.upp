@@ -1,6 +1,7 @@
 description "Control to show animated GIF and multipage TIFF files\377";
 
 uses
+	CtrlLib,
 	plugin\gif,
 	plugin\tif;
 
