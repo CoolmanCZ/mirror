@@ -448,6 +448,8 @@ Vector<String> GitInfo(const String& package)
 			info.Add("#define bmGIT_REVISION " + AsCString(TrimBoth(v)));
 		command = "git -C " << d << " rev-parse --abbrev-ref HEAD";
 		v = Sys(command);
+		if(!v.IsEmpty())
+			info.Add("#define bmGIT_BRANCH " + AsCString(TrimBoth(v)));
 		command = "git -C " << d << " config --local branch." << TrimBoth(v) << ".remote";
 		v = Sys(command);
 		command = "git -C " << d << " config --local remote." << TrimBoth(v) << ".url";

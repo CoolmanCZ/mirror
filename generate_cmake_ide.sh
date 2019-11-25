@@ -39,7 +39,14 @@ UPP_SRC_BASE="."
 UPP_SRC_DIR="${UPP_SRC_BASE}/uppsrc"
 
 PROJECT_NAME="${UPP_SRC_DIR}/ide/ide.upp"
-PROJECT_FLAGS="-DflagGUI -DflagMT -DflagGCC -DflagLINUX -DflagPOSIX -DflagSHARED"
+
+if [ $# -lt 1 ]; then
+  echo "# linux build"
+  PROJECT_FLAGS="-DflagGUI -DflagMT -DflagGCC -DflagLINUX -DflagPOSIX -DflagSHARED"
+else
+  echo "# MinGW build"
+  PROJECT_FLAGS="-DflagGUI -DflagMT -DflagGCC -DflagPOSIX"
+fi
 
 generate_main_cmake_file "${PROJECT_NAME}" "${PROJECT_FLAGS}"
 

@@ -16,6 +16,14 @@ String SplashCtrl::GenerateVersionInfo(char separator)
 	String h;
 
 	h << "Version: " << GenerateVersionNumber();
+#ifdef bmGIT_BRANCH
+	h << separator;
+    h << "Branch: " << bmGIT_BRANCH;
+#ifdef bmGIT_URL
+	h << separator;
+    h << "URL: " << bmGIT_URL;
+#endif
+#endif
 	h << separator;
 	if(sizeof(void *) == 8)
 		h << "(64 bit)";
