@@ -9,7 +9,7 @@ void Pdb::Visual::Cat(const String& text, Color ink)
 	p.ink = ink;
 	p.mark = false;
 	length += text.GetLength();
-	if(length > 250)
+	if(length > 500)
 		throw LengthLimit();
 }
 
@@ -84,23 +84,16 @@ int Pdb::IntAt(Pdb::Val record, const char *id, int i)
 	return (int)GetInt(At(record, id, i));
 }
 
-String Pdb::IntFormat(int64 i, dword flags)
-{
-	String r;
-	if(i < 0)
-		r << '-' << Format64(-i);
-	else
-		r << Format64(i);
-	if(i >= 32 && i < 128)
-		r << " \'" << (char)i << '\'';
-	return r;
-}
-
 void Pdb::CatInt(Visual& result, int64 val, dword flags)
 {
-	result.Cat(IntFormat(val), SRed);
+	if(val < 0)
+		result.Cat("-" + Format64(-val), SRed);
+	else
+		result.Cat(Format64(val), SRed);
 	if(flags & MEMBER)
 		return;
+	if(val >= 32 && val < 128)
+		result.Cat(String() << " \'" << (char)val << '\'', SRed);
 	result.Cat(" 0x" + Format64Hex(val), SMagenta);
 }
 
@@ -163,7 +156,7 @@ void Pdb::Visualise(Visual& result, Pdb::Val val, dword flags)
 	}
 	if(val.type < 0) { // Display primitive type
 		#define RESULTINT(x, type) case x: CatInt(result, (type)val.ival, flags); break;
-		#define RESULTINTN(x, type, t2) case x:  if(IsNull((t2)val.ival)) result.Cat("Null ", Magenta); CatInt(result, (type)val.ival, flags); break;
+		#define RESULTINTN(x, type, t2) case x:  if(IsNull((t2)val.ival)) result.Cat("Null ", SCyan); CatInt(result, (type)val.ival, flags); break;
 		switch(val.type) {
 		RESULTINT(BOOL1, bool)
 		RESULTINT(UINT1, byte)
@@ -177,7 +170,7 @@ void Pdb::Visualise(Visual& result, Pdb::Val val, dword flags)
 		case DBL:
 		case FLT:
 			if(IsNull(val.fval))
-				result.Cat("Null", SMagenta);
+				result.Cat("Null", SCyan);
 			else
 			if(IsInf(val.fval))
 				result.Cat("INF", SMagenta);
@@ -212,13 +205,13 @@ void Pdb::Visualise(Visual& result, Pdb::Val val, dword flags)
 	
 	if(!(flags & RAW) && !raw)
 		try {
-			if(PrettyData(result, val, flags))
-				return;
+			if(VisualisePretty(result, val, flags)) {
+				if(flags & MEMBER)
+					return;
+				result.Cat(", raw: ", SGray);
+			}
 		}
-		catch(CParser::Error e) {
-			// if failed, display as raw data
-		}
-
+		catch(CParser::Error e) {} // if failed, display as raw data
 	
 	result.Cat("{ ", SColorMark);
 	bool cm = false;
@@ -240,6 +233,7 @@ void Pdb::Visualise(Visual& result, Pdb::Val val, dword flags)
 			result.Cat(e, SColorDisabled);
 		}
 	}
+#if 0
 	for(int i = 0; i < t.static_member.GetCount(); i++) {
 		if(cm)
 			result.Cat(", ");
@@ -257,6 +251,7 @@ void Pdb::Visualise(Visual& result, Pdb::Val val, dword flags)
 			result.Cat(e, SColorDisabled);
 		}
 	}
+#endif
 	BaseFields(result, t, val, flags, cm, 0);
 	result.Cat(" }", SColorMark);
 }
@@ -301,7 +296,7 @@ Size Pdb::Visual::GetSize() const
 	return Size(cx, StdFont().Info().GetHeight());
 }
 
-Pdb::Visual Pdb::Visualise(Val v)
+Pdb::Visual Pdb::Visualise(Val v, dword flags)
 {
 	Visual r;
 	try {
@@ -314,7 +309,7 @@ Pdb::Visual Pdb::Visualise(Val v)
 	return r;
 }
 
-Pdb::Visual Pdb::Visualise(const String& exp)
+Pdb::Visual Pdb::Visualise(const String& exp, dword flags)
 {
 	Visual r;
 	try {
@@ -329,22 +324,46 @@ Pdb::Visual Pdb::Visualise(const String& exp)
 	return r;
 }
 
+Size Pdb::VisualPart::GetSize() const
+{
+	return GetTextSize(*text < 32 ? "MM" : ~text, StdFont());
+}
+
+Size Pdb::VisualDisplay::GetStdSize(const Value& q) const
+{
+	if(!IsType<Visual>(q))
+		return StdDisplay().GetStdSize(q);
+	Size sz(0, GetStdFontCy());
+	if(IsType<Visual>(q))
+		for(const VisualPart& p : ValueTo<Visual>(q).part)
+			sz.cx += p.GetSize().cx;
+	return sz;
+}
+
 void Pdb::VisualDisplay::Paint(Draw& w, const Rect& r, const Value& q,
                                Color ink, Color paper, dword style) const
 {
+	if(!IsType<Visual>(q)) {
+		StdDisplay().Paint(w, r, q, ink, paper, style);
+		return;
+	}
 	int x = r.left;
 	int y = r.top + (r.Height() - Draw::GetStdFontCy()) / 2;
 	bool blue = (style & (Display::CURSOR|Display::FOCUS)) == (Display::CURSOR|Display::FOCUS);
-	if(IsType<Visual>(q)) {
-		const Visual& v = ValueTo<Visual>(q);
-		for(int i = 0; i < v.part.GetCount() && x < r.right; i++) {
-			const VisualPart& p = v.part[i];
-			Size sz = GetTextSize(p.text, StdFont());
-			w.DrawRect(x, y, sz.cx, r.Height(),
-			           blue || !p.mark ? paper : HighlightSetup::GetHlStyle(HighlightSetup::PAPER_SELWORD).color);
-			w.DrawText(x, y, p.text, StdFont(), blue ? ink : p.ink);
-			x += sz.cx;
+	for(const VisualPart& p : ValueTo<Visual>(q).part) {
+		Size sz = p.GetSize();
+		w.DrawRect(x, y, sz.cx, r.Height(),
+		           blue || !p.mark ? paper : HighlightSetup::GetHlStyle(HighlightSetup::PAPER_SELWORD).color);
+		if(*p.text == '\1') { // Color support
+			Rect r = RectC(x, y, sz.cx, sz.cy);
+			r.Deflate(DPI(1));
+			w.DrawRect(r, SBlack);
+			r.Deflate(DPI(1));
+			w.DrawRect(r, p.ink);
 		}
+		else
+			w.DrawText(x, y, p.text, StdFont(), blue ? ink : p.ink);
+		x += sz.cx;
 	}
 	w.DrawRect(x, y, r.right - x, r.Height(), paper);
 }

@@ -512,12 +512,18 @@ bool PostgreSQLConnection::Execute()
 		if(*s == '\'' || *s == '\"')
 			s = PostgreSQLReadString(s, query);
 		else {
-			if(*s == '?') {
-				if(pi >= param.GetCount()) {
-					session.SetError("Invalid number of parameters", statement);
-					return false;
+			if(*s == '?' && !noquestionparams) {
+				if(s[1] == '?') {
+					query.Cat('?');
+					s++;
 				}
-				query.Cat(param[pi++]);
+				else {
+					if(pi >= param.GetCount()) {
+						session.SetError("Invalid number of parameters", statement);
+						return false;
+					}
+					query.Cat(param[pi++]);
+				}
 			}
 			else
 				query.Cat(*s);

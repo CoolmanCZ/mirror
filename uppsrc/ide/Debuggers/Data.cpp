@@ -276,27 +276,25 @@ void Pdb::ExploreKey(ArrayCtrl *a)
 
 bool Pdb::Tip(const String& exp, CodeEditor::MouseTip& mt)
 {
-/*	mt.display = &StdDisplay();
-	mt.value = exp;
-	mt.sz = Size(100, 20);
-	return true;*/
 	DR_LOG("Pdb::Tip");
 	Visual r;
 	try {
 		CParser p(exp);
 		Val v = Exp(p);
-		Visualise(r, v, 2);
-		if(r.part.GetCount()) {
-			mt.sz = r.GetSize() + Size(4, 4);
-			mt.value = RawPickToValue(pick(r));
-			mt.display = &Single<VisualDisplay>();
-			DR_LOG("Pdb::Tip true");
-			return true;
-		}
+		Visualise(r, v, 0);
 	}
 	catch(LengthLimit) {}
-	catch(CParser::Error) {}
-	DR_LOG("Pdb::Tip false");
+	catch(CParser::Error) {
+		DR_LOG("Pdb::Tip false");
+		return false;
+	}
+	if(r.part.GetCount()) {
+		mt.sz = r.GetSize() + Size(4, 4);
+		mt.value = RawPickToValue(pick(r));
+		mt.display = &Single<VisualDisplay>();
+		DR_LOG("Pdb::Tip true");
+		return true;
+	}
 	return false;
 }
 
@@ -310,6 +308,7 @@ void Pdb::Data()
 	case TAB_EXPLORER: Explorer(); break;
 	case TAB_MEMORY: memory.Refresh(); break;
 	}
+	SetTree(tree_exp);
 }
 
 void Pdb::MemoryGoto(const String& exp)

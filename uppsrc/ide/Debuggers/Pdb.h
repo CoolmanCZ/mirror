@@ -114,6 +114,8 @@ struct Pdb : Debugger, ParentCtrl {
 	struct NamedVal : Moveable<NamedVal> {
 		String name;
 		Val    val;
+		Val    key;
+		int64  from = 0;
 	};
 
 	struct Type : Moveable<Type> {
@@ -144,6 +146,8 @@ struct Pdb : Debugger, ParentCtrl {
 		String  text;
 		Color   ink;
 		bool    mark;
+		
+		Size    GetSize() const;
 	};
 
 	struct Visual {
@@ -160,6 +164,7 @@ struct Pdb : Debugger, ParentCtrl {
 	};
 
 	struct VisualDisplay : Display {
+		virtual Size GetStdSize(const Value& q) const;
 		virtual void Paint(Draw& w, const Rect& r, const Value& q,
 	                       Color ink, Color paper, dword style) const;
 	};
@@ -229,9 +234,9 @@ struct Pdb : Debugger, ParentCtrl {
 	EditString         expexp;
 	Button             exback, exfw;
 	StaticRect         explorer_pane;
-	StaticRect         pane;
-	Splitter           split;
+	StaticRect         pane, rpane;
 	TreeCtrl           tree;
+	String             tree_exp;
 	bool               first_exception = true;
 
 	VectorMap<String, String> treetype;
@@ -254,10 +259,13 @@ struct Pdb : Debugger, ParentCtrl {
 		int64          data_count; // number of entries
 		Vector<String> data_type; // type of data items (usuallt type_param)
 		Vector<adr_t>  data_ptr; // pointer to items (data_count.GetCount() * data_type.GetCount() items)
-		String         text;
+		Visual         text;
+
+		void           Text(const char *s, Color color = SRed) { text.Cat(s, color); }
+		void           SetNull()                               { Text("Null", SCyan); }
 	};
 
-	VectorMap<String, Tuple<int, Event<Val, const Vector<String>&, int, int, Pdb::Pretty&>>> pretty;
+	VectorMap<String, Tuple<int, Event<Val, const Vector<String>&, int64, int, Pdb::Pretty&>>> pretty;
 	
 	bool       break_running; // Needed for Wow64 BreakRunning to avoid ignoring breakpoint
 	
@@ -376,17 +384,17 @@ struct Pdb : Debugger, ParentCtrl {
 	Val        At(Pdb::Val val, int i);
 	Val        At(Pdb::Val record, const char *id, int i);
 	int        IntAt(Pdb::Val record, const char *id, int i);
-	String     IntFormat(int64 i, dword flags = 0);
 	void       CatInt(Visual& result, int64 val, dword flags = 0);
 
 	enum       { MEMBER = 1, RAW = 2 };
 	void       BaseFields(Visual& result, const Type& t, Pdb::Val val, dword flags, bool& cm, int depth);
 	void       Visualise(Visual& result, Pdb::Val val, dword flags);
-	Visual     Visualise(Val v);
-	Visual     Visualise(const String& rexp);
+	Visual     Visualise(Val v, dword flags = 0);
+	Visual     Visualise(const String& rexp, dword flags = 0);
 
-	bool       PrettyData(Visual& result, Pdb::Val val, dword flags);
+	bool       VisualisePretty(Visual& result, Pdb::Val val, dword flags);
 
+	bool       PrettyVal(Pdb::Val val, int64 from, int count, Pretty& p);
 	void       PrettyString(Val val, const Vector<String>& tparam, int64 from, int count, Pretty& p);
 	void       PrettyWString(Val val, const Vector<String>& tparam, int64 from, int count, Pretty& p);
 	void       PrettyVector(Val val, const Vector<String>& tparam, int64 from, int count, Pretty& p);
@@ -399,11 +407,17 @@ struct Pdb : Debugger, ParentCtrl {
 	void       PrettyArrayMap(Val val, const Vector<String>& tparam, int64 from, int count, Pretty& p);
 	void       PrettyDate(Pdb::Val val, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p);
 	void       PrettyTime(Pdb::Val val, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p);
+	void       PrettyColor(Pdb::Val val, const Vector<String>&, int64 from, int count, Pdb::Pretty& p);
+	void       PrettyRGBA(Pdb::Val val, const Vector<String>&, int64 from, int count, Pdb::Pretty& p);
+	void       PrettyFont(Pdb::Val val, const Vector<String>&, int64 from, int count, Pdb::Pretty& p);
 	void       PrettyValueArray_(adr_t a, Pdb::Pretty& p);
 	void       PrettyValueArray(Pdb::Val val, const Vector<String>&, int64 from, int count, Pdb::Pretty& p);
 	void       PrettyValue(Pdb::Val val, const Vector<String>& tparam, int64 from, int count, Pretty& p);
 	void       PrettyValueMap_(adr_t a, Pdb::Pretty& p, int64 from, int count);
 	void       PrettyValueMap(Pdb::Val val, const Vector<String>&, int64 from, int count, Pdb::Pretty& p);
+
+	void       PrettyStdVector(Pdb::Val val, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p);
+	void       PrettyStdString(Pdb::Val val, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p);
 
 // code
 	Thread&    Current();
@@ -461,6 +475,7 @@ struct Pdb : Debugger, ParentCtrl {
 
 	void      SetTree(const String& exp);
 	void      SetTreeA(ArrayCtrl *data);
+	void      PrettyTreeNode(int parent, Pdb::Val val, int64 from = 0);
 	void      TreeNode(int parent, const String& name, Val val);
 	void      TreeExpand(int node);
 	String    StoreTree(int parent);
@@ -479,6 +494,8 @@ struct Pdb : Debugger, ParentCtrl {
 	void      LocalsMenu(Bar& bar);
 	void      WatchesMenu(Bar& bar);
 	void      ExplorerMenu(Bar& bar);
+	
+	void      SyncTreeDisas();
 
 	void      Tab();
 
