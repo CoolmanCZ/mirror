@@ -86,12 +86,14 @@ struct Pdb : Debugger, ParentCtrl {
 	
 	struct TypeInfo : Moveable<TypeInfo> {
 		int    type = UNKNOWN;
-		int    ref = 0; // this is pointer (or reference)
+		int    ref = 0; // this is pointer or reference
+		bool   reference = false; // this is reference
 	};
 
 	struct Val : Moveable<Val, TypeInfo> {
 		bool   array = false;
 		bool   rvalue = false; // data is loaded from debugee (if false, data pointed to by address)
+		bool   udt = false; // user defined type (e.g. struct..)
 		byte   bitpos = 0;
 		byte   bitcnt = 0;
 		int    reported_size = 0; // size of symbol, can be 0 - unknown, useful for C fixed size arrays
@@ -217,7 +219,7 @@ struct Pdb : Debugger, ParentCtrl {
 	EditString         watchedit;
 	
 	enum { // Order in this enum has to be same as order of tab.Add
-		TAB_AUTOS, TAB_LOCALS, TAB_THIS, TAB_WATCHES, TAB_EXPLORER, TAB_CPU, TAB_MEMORY
+		TAB_AUTOS, TAB_LOCALS, TAB_THIS, TAB_WATCHES, TAB_CPU, TAB_MEMORY
 	};
 
 	TabCtrl            tab;
@@ -229,7 +231,6 @@ struct Pdb : Debugger, ParentCtrl {
 	ArrayCtrl          self;
 	ArrayCtrl          watches;
 	ArrayCtrl          autos;
-	ArrayCtrl          explorer;
 	ColumnList         cpu;
 	EditString         expexp;
 	Button             exback, exfw;
@@ -240,6 +241,7 @@ struct Pdb : Debugger, ParentCtrl {
 	bool               first_exception = true;
 
 	VectorMap<String, String> treetype;
+	int restoring_tree = 0;
 
 	Vector<String>      exprev, exnext;
 
@@ -343,6 +345,8 @@ struct Pdb : Debugger, ParentCtrl {
 	String                TypeInfoAsString(TypeInfo tf);
 	TypeInfo              GetTypeInfo(adr_t modbase, const String& name);
 	TypeInfo              GetTypeInfo(const String& name) { return GetTypeInfo(current_modbase, name); } // only in Pretty...
+	
+	static String FormatString(const String& x) { return AsCString(x, INT_MAX, NULL, CheckUtf8(x) ? 0 : ASCSTRING_OCTALHI); }
 
 // exp
 	Val        MakeVal(const String& type, adr_t address);
@@ -454,16 +458,6 @@ struct Pdb : Debugger, ParentCtrl {
 	void      AddThis(const VectorMap<String, Val>& m, adr_t address, const VectorMap<String, Value>& prev);
 	void      AddThis(int type, adr_t address, const VectorMap<String, Value>& prev);
 	void      This();
-	void      Explore(const Val& val, const VectorMap<String, Value>& prev);
-	void      Explore(const String& exp);
-	void      ExploreKey(ArrayCtrl *a);
-	void      Explorer();
-	void      ExpExp();
-	void      ExBack();
-	void      ExFw();
-	void      DoExplorer();
-	String    GetExpExp();
-	void      ExplorerTree();
 	void      Data();
 	void      ClearWatches();
 	void      DropWatch(PasteClip& clip);
@@ -476,10 +470,14 @@ struct Pdb : Debugger, ParentCtrl {
 	void      SetTree(const String& exp);
 	void      SetTreeA(ArrayCtrl *data);
 	void      PrettyTreeNode(int parent, Pdb::Val val, int64 from = 0);
-	void      TreeNode(int parent, const String& name, Val val);
+	bool      TreeNode(int parent, const String& name, Val val, int64 from = 0);
 	void      TreeExpand(int node);
-	String    StoreTree(int parent);
+	String    GetTreeText(int id);
+	void      GetTreeText(String& r, int id, int depth);
+	void      TreeMenu(Bar& bar);
+	void      StoreTree(StringBuffer& r, int parent);
 	void      SaveTree();
+	int       FindChild(int parent, String id);
 	void      ExpandTreeType(int parent, CParser& p);
 
 	void      CopyStack();
@@ -493,7 +491,6 @@ struct Pdb : Debugger, ParentCtrl {
 	void      AutosMenu(Bar& bar);
 	void      LocalsMenu(Bar& bar);
 	void      WatchesMenu(Bar& bar);
-	void      ExplorerMenu(Bar& bar);
 	
 	void      SyncTreeDisas();
 

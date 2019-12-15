@@ -161,119 +161,6 @@ void Pdb::Watches()
 	}
 }
 
-void Pdb::Explore(const Val& val, const VectorMap<String, Value>& prev)
-{
-	const Type& t = GetType(val.type);
-	for(int i = 0; i < t.base.GetCount(); i++) {
-		Val b = t.base[i];
-		b.address += val.address;
-		Vis(explorer, ':' + GetType(b.type).name, prev, Visualise(b));
-	}
-	for(int i = 0; i < t.member.GetCount(); i++) {
-		Val r = t.member[i];
-		r.address += val.address;
-		Vis(explorer, '.' + t.member.GetKey(i), prev, Visualise(r));
-	}
-	for(int i = 0; i < t.static_member.GetCount(); i++)
-		Vis(explorer, "::" + t.static_member.GetKey(i), prev, Visualise(t.static_member[i]));
-}
-
-void Pdb::Explorer()
-{
-	VectorMap<String, Value> prev = DataMap(explorer);
-	explorer.Clear();
-	try {
-		String x = ~expexp;
-		if(!IsNull(x)) {
-			CParser p(x);
-			Val v = Exp(p);
-			Vis(explorer, "=", prev, Visualise(v));
-			if(v.type >= 0 && v.ref == 0 && !v.rvalue)
-				Explore(v, prev);
-			if(v.ref > 0 && GetRVal(v).address)
-				for(int i = 0; i < 20; i++)
-					Vis(explorer, Format("[%d]", i), prev, Visualise(DeRef(Compute(v, RValue(i), '+'))));
-		}
-	}
-	catch(CParser::Error e) {
-		Visual v;
-		v.Cat(e, LtRed);
-		explorer.Add("", RawPickToValue(pick(v)));
-	}
-	exback.Enable(exprev.GetCount());
-	exfw.Enable(exnext.GetCount());
-}
-
-void Pdb::Explore(const String& exp)
-{
-	exprev.Add(~expexp);
-	expexp <<= exp;
-	Explorer();
-	DoExplorer();
-}
-
-String Pdb::GetExpExp()
-{
-	String w;
-	if(explorer.IsCursor()) {
-		w = ~expexp;
-		for(const char *s = w; *s; s++)
-			if(strchr("*/+-", *s)) {
-				w = '(' + w + ')';
-				break;
-			}
-		String k = (String)explorer.GetKey();
-		if(k != "=")
-			w = w + k;
-	}
-	return w;
-}
-
-void Pdb::ExpExp()
-{
-	if(explorer.GetCursor() > 0)
-		Explore(GetExpExp());
-}
-
-void Pdb::ExplorerTree()
-{
-	SetTree(GetExpExp());
-}
-
-void Pdb::DoExplorer()
-{
-	tab.Set(TAB_EXPLORER);
-	expexp.SetFocus();
-	expexp.SetSelection();
-	Explorer();
-}
-
-void Pdb::ExBack()
-{
-	if(exprev.GetCount()) {
-		exnext.Add(~expexp);
-		expexp <<= exprev.Pop();
-		Explorer();
-	}
-}
-
-void Pdb::ExFw()
-{
-	if(exnext.GetCount()) {
-		exprev.Add(~expexp);
-		expexp <<= exnext.Pop();
-		Explorer();
-	}
-}
-
-void Pdb::ExploreKey(ArrayCtrl *a)
-{
-	if(a && a->IsCursor()) {
-		tab.Set(TAB_EXPLORER);
-		Explore(a->GetKey());
-	}
-}
-
 bool Pdb::Tip(const String& exp, CodeEditor::MouseTip& mt)
 {
 	DR_LOG("Pdb::Tip");
@@ -305,7 +192,6 @@ void Pdb::Data()
 	case TAB_LOCALS: Locals(); break;
 	case TAB_THIS: This(); break;
 	case TAB_WATCHES: Watches(); break;
-	case TAB_EXPLORER: Explorer(); break;
 	case TAB_MEMORY: memory.Refresh(); break;
 	}
 	SetTree(tree_exp);
@@ -333,31 +219,40 @@ void Pdb::MemoryGoto(const String& exp)
 	}
 }
 
-
 void Pdb::MemMenu(ArrayCtrl& array, Bar& bar, const String& exp)
 {
 	if(bar.IsScanKeys())
 		return;
+	auto CopyLine = [&](int i, ArrayCtrl& array) {
+		return String() << array.Get(i, 0) << '=' << array.Get(i, 1).To<Visual>().GetString();
+	};
+	ArrayCtrl *ap = &array;
+	bar.Add(array.IsCursor(), "Copy", [=] {
+		ClearClipboard();
+		AppendClipboardText(CopyLine(ap->GetCursor(), *ap));
+	});
+	bar.Add("Copy all", [=] {
+		ClearClipboard();
+		String s;
+		for(int i = 0; i < ap->GetCount(); i++)
+			MergeWith(s, "\n", CopyLine(i, *ap));
+		AppendClipboardText(s);
+	});
+	bar.Separator();
 	try {
 		CParser p(exp);
 		Val v = Exp(p);
 		bool sep = true;
-		if(v.ref > 0) {
-			if(sep)
-				bar.Separator();
+		if(v.ref > 0 && !v.reference) {
 			sep = false;
 			bar.Add("Memory at " + exp, THISBACK1(MemoryGoto, exp));
 		}
 		else
 		if(v.rvalue) {
-			if(sep)
-				bar.Separator();
 			sep = false;
 			bar.Add("Memory at 0x" + FormatIntHex((dword)GetInt64(v)), THISBACK1(MemoryGoto, "&" + exp));
 		}
 		if(!v.rvalue) {
-			if(sep)
-				bar.Separator();
 			sep = false;
 			bar.Add("Memory at &&" + exp, THISBACK1(MemoryGoto, "&" + exp));
 		}
@@ -368,7 +263,6 @@ void Pdb::MemMenu(ArrayCtrl& array, Bar& bar, const String& exp)
 
 void Pdb::DataMenu(ArrayCtrl& array, Bar& bar, const String& exp)
 {
-	bar.Add("Explore", THISBACK1(ExploreKey, &array));
 	MemMenu(array, bar, exp);
 	bar.Separator();
 	bar.Add("Show type", [=] { show_type = !show_type; Data(); }).Check(show_type);
@@ -424,12 +318,6 @@ void Pdb::WatchesMenu(Bar& bar)
 	bar.Add(b, "Remove watch..", THISBACK(RemoveWatch));
 	bar.Separator();
 	watches.StdBar(bar);
-}
-
-void Pdb::ExplorerMenu(Bar& bar)
-{
-	bar.Add("Explore", THISBACK(ExpExp));
-	MemMenu(watches, bar, GetExpExp());
 }
 
 void Pdb::SetTab(int i)

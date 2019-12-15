@@ -5,25 +5,42 @@
 #define LLOG(x)  // DLOG(x)
 
 #ifdef _DEBUG
-const char * SymTagAsString( DWORD symTag )
-{
-	switch( symTag )
-	{
-#define SYMTAG(t) case SymTag##t: return #t;
-		SYMTAG(Function)
-		SYMTAG(Data)
-		SYMTAG(PublicSymbol)
-		SYMTAG(UDT)
-		SYMTAG(Enum)
-		SYMTAG(Typedef)
-		SYMTAG(PointerType)
-		SYMTAG(ArrayType)
-		SYMTAG(BaseType)
-		SYMTAG(VTableShape)
-		SYMTAG(VTable)
-#undef SYMTAG
-		default: return "???";
-	}
+
+String SymTagAsString(int n) {
+	static VectorMap<int, String> tagmap = {
+		{ SymTagNull, "SymTagNull" },
+		{ SymTagExe, "SymTagExe" },
+		{ SymTagCompiland, "SymTagCompiland" },
+		{ SymTagCompilandDetails, "SymTagCompilandDetails" },
+		{ SymTagCompilandEnv, "SymTagCompilandEnv" },
+		{ SymTagFunction, "SymTagFunction" },
+		{ SymTagBlock, "SymTagBlock" },
+		{ SymTagData, "SymTagData" },
+		{ SymTagAnnotation, "SymTagAnnotation" },
+		{ SymTagLabel, "SymTagLabel" },
+		{ SymTagPublicSymbol, "SymTagPublicSymbol" },
+		{ SymTagUDT, "SymTagUDT" },
+		{ SymTagEnum, "SymTagEnum" },
+		{ SymTagFunctionType, "SymTagFunctionType" },
+		{ SymTagPointerType, "SymTagPointerType" },
+		{ SymTagArrayType, "SymTagArrayType" },
+		{ SymTagBaseType, "SymTagBaseType" },
+		{ SymTagTypedef, "SymTagTypedef" },
+		{ SymTagBaseClass, "SymTagBaseClass" },
+		{ SymTagFriend, "SymTagFriend" },
+		{ SymTagFunctionArgType, "SymTagFunctionArgType" },
+		{ SymTagFuncDebugStart, "SymTagFuncDebugStart" },
+		{ SymTagFuncDebugEnd, "SymTagFuncDebugEnd" },
+		{ SymTagUsingNamespace, "SymTagUsingNamespace" },
+		{ SymTagVTableShape, "SymTagVTableShape" },
+		{ SymTagVTable, "SymTagVTable" },
+		{ SymTagCustom, "SymTagCustom" },
+		{ SymTagThunk, "SymTagThunk" },
+		{ SymTagCustomType, "SymTagCustomType" },
+		{ SymTagManagedType, "SymTagManagedType" },
+		{ SymTagDimension, "SymTagDimension" },
+	};
+	return tagmap.Get(n, "");
 }
 
 const char * BaseTypeAsString( DWORD baseType )
@@ -128,6 +145,16 @@ Pdb::FnInfo Pdb::GetFnInfo(adr_t address)
 void Pdb::TypeVal(Pdb::Val& v, int typeId, adr_t modbase)
 {
 	adr_t tag;
+
+	BOOL reference;
+	dword dw = 0;
+#ifdef COMPILER_MINGW
+	SymGetTypeInfo(hProcess, modbase, typeId, (IMAGEHLP_SYMBOL_TYPE_INFO)31, &reference);
+#else
+	SymGetTypeInfo(hProcess, modbase, typeId, TI_GET_IS_REFERENCE, &reference);
+#endif
+	v.reference = reference;
+
 	for(;;) {
 		tag = GetSymInfo(modbase, typeId, TI_GET_SYMTAG);
 		if(tag == SymTagPointerType)
@@ -135,9 +162,12 @@ void Pdb::TypeVal(Pdb::Val& v, int typeId, adr_t modbase)
 		else
 		if(tag == SymTagArrayType)
 			v.array = true;
-		else
+		else {
+			if(tag == SymTagUDT)
+				v.udt = true;
 			break;
-		typeId = GetSymInfo(modbase, typeId, TI_GET_TYPE);
+		}
+		typeId = GetSymInfo(modbase, typeId, TI_GET_TYPE); // follow pointer(s) to base type
 	}
 	v.type = UNKNOWN;
 	if(tag == SymTagUDT)
@@ -186,7 +216,20 @@ BOOL CALLBACK Pdb::EnumLocals(PSYMBOL_INFO pSym, ULONG SymbolSize, PVOID UserCon
 	if(pSym->Tag == SymTagFunction)
 		return TRUE;
 
-	Val& v = (pSym->Flags & IMAGEHLP_SYMBOL_INFO_PARAMETER ? c.param : c.local).Add(pSym->Name);
+#if 0
+	DLOG("------");
+	DDUMP(pSym->Name);
+	DDUMPHEX(pSym->Flags);
+	DDUMP(pSym->Flags & IMAGEHLP_SYMBOL_INFO_PARAMETER);
+	DDUMP(pSym->Flags & IMAGEHLP_SYMBOL_INFO_REGISTER);
+	DDUMP(pSym->Flags & IMAGEHLP_SYMBOL_INFO_REGRELATIVE);
+	DDUMP(pSym->Flags & IMAGEHLP_SYMBOL_INFO_FRAMERELATIVE);
+	DDUMP(pSym->Register == CV_ALLREG_VFRAME);
+	DDUMP(pSym->Register);
+#endif
+
+	bool param = pSym->Flags & IMAGEHLP_SYMBOL_INFO_PARAMETER;
+	Val& v = (param ? c.param : c.local).Add(pSym->Name);
 	v.address = (adr_t)pSym->Address;
 	if(pSym->Flags & IMAGEHLP_SYMBOL_INFO_REGISTER)
 		v.address = pSym->Register;
@@ -206,17 +249,22 @@ BOOL CALLBACK Pdb::EnumLocals(PSYMBOL_INFO pSym, ULONG SymbolSize, PVOID UserCon
 	else
 	if(pSym->Flags & IMAGEHLP_SYMBOL_INFO_FRAMERELATIVE)
 		v.address += c.frame;
+	
+	LLOG("LOCAL " << pSym->Name << ": " << Format64Hex(v.address));
 	c.pdb->TypeVal(v, pSym->TypeIndex, (adr_t)pSym->ModBase);
+	if(param && v.udt && v.ref == 0 && c.pdb->win64) { // dbghelp.dll incorrectly does not report pointer for (copied) value struct params
+		v.ref++;
+		v.reference = true;
+	}
 	v.reported_size = pSym->Size;
 	v.context = c.context;
-	DLOG("LOCAL " << pSym->Name << ": " << Format64Hex(v.address));
 	return TRUE;
 }
 
 void Pdb::GetLocals(Frame& frame, Context& context, VectorMap<String, Pdb::Val>& param,
                     VectorMap<String, Pdb::Val>& local)
 {
-	DLOG("============ GetLocals");
+	LLOG("GetLocals *****************");
 	static IMAGEHLP_STACK_FRAME f;
 	f.InstructionOffset = frame.pc;
 	SymSetContext(hProcess, &f, 0);
@@ -227,7 +275,6 @@ void Pdb::GetLocals(Frame& frame, Context& context, VectorMap<String, Pdb::Val>&
 	SymEnumSymbols(hProcess, 0, 0, &EnumLocals, &c);
 	param = pick(c.param);
 	local = pick(c.local);
-	DLOG("...");
 }
 
 BOOL CALLBACK Pdb::EnumGlobals(PSYMBOL_INFO pSym, ULONG SymbolSize, PVOID UserContext)
@@ -239,16 +286,6 @@ BOOL CALLBACK Pdb::EnumGlobals(PSYMBOL_INFO pSym, ULONG SymbolSize, PVOID UserCo
 
 	LLOG("GLOBAL: " << pSym->Name << " " << Format64Hex(pSym->Address));
 
-#if 0
-
-	DWORD dummy;
-	IMAGEHLP_LINE ln;
-	ln.SizeOfStruct = sizeof(ln);
-	ln.Address = pSym->Address;
-	if(SymGetLineFromAddr(c.pdb->hProcess, (uintptr_t)pSym->Address, &dummy, &ln)) {
-	}
-	else
-#endif
 	Val& v = c.pdb->global.GetAdd(pSym->Name);
 	v.address = (adr_t)pSym->Address;
 	v.reported_size = pSym->Size;

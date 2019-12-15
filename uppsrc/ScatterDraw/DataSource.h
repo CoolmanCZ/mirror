@@ -47,7 +47,8 @@ public:
 	double AvgY()  					{return Avg(&DataSource::y);}		
 	double AvgX()  					{return Avg(&DataSource::x);}	
 	double RMSY()  					{return RMS(&DataSource::y);}			
-	double StdDevY(double avg = Null)  				{return StdDev(&DataSource::y, avg);}	
+	double StdDevY(double avg = Null)  				{return StdDev(&DataSource::y, avg);}
+	double StdDevX(double avg = Null)  				{return StdDev(&DataSource::x, avg);}
 	double VarianceY(double avg = Null)  			{return Variance(&DataSource::y, avg);}	
 	Vector<int64> UpperEnvelopeY(double width)  	{return UpperEnvelope(&DataSource::y, &DataSource::x, width);}	
 	Vector<int64> LowerEnvelopeY(double width)  	{return LowerEnvelope(&DataSource::y, &DataSource::x, width);}	
@@ -82,7 +83,7 @@ public:
 		{GetSpectralMoments(&DataSource::y, &DataSource::x, frequency, m_1, m0, m1, m2);}
 		
 	Vector<double> SortDataY() 				{return SortData(&DataSource::y);}
-	Vector<double> PercentileY(double rate) 	{return Percentile(&DataSource::y, rate);}
+	Vector<double> PercentileY(double rate) {return Percentile(&DataSource::y, rate);}
 	double PercentileAvgY(double rate) 		{return PercentileAvg(&DataSource::y, rate);}
 	
 	double Min(Getdatafun getdata, int64& id);

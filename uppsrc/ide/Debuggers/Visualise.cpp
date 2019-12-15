@@ -106,13 +106,16 @@ void Pdb::Visualise(Visual& result, Pdb::Val val, dword flags)
 	if(val.ref > 0 || val.type < 0) // if pointer or primitive type, fetch it from the memory
 		val = GetRVal(val);
 	if(val.ref > 0) {
-		result.Cat(Hex(val.address), SLtMagenta);
+		if(!val.reference)
+			result.Cat(Hex(val.address), SLtMagenta);
 		while(val.ref > 1) {
 			val = GetRVal(DeRef(val));
-			result.Cat("->");
-			result.Cat(Hex(val.address), SLtMagenta);
+			if(!val.reference) {
+				result.Cat("->");
+				result.Cat(Hex(val.address), SLtMagenta);
+			}
 		}
-		if(val.type == UINT1 || val.type == SINT1) { // show string at [unsigned] char *
+		if((val.type == UINT1 || val.type == SINT1) && !val.reference) { // show string at [unsigned] char *
 			if(Byte(val.address) < 0)
 				result.Cat("??", SColorDisabled);
 			else {
@@ -124,17 +127,23 @@ void Pdb::Visualise(Visual& result, Pdb::Val val, dword flags)
 					dt = "..";
 				}
 				result.Cat(" ");
-				result.Cat(AsCString(x), SRed);
+				result.Cat(FormatString(x), SRed);
 				result.Cat(dt, SGray);
 			}
 			return;
 		}
 		if(!(flags & MEMBER) && val.type != UNKNOWN && val.address) {
-			result.Cat("->", SColorMark);
+			if(!val.reference)
+				result.Cat("->", SColorMark);
 			int sz = SizeOfType(val.type);
 			int n = 40;
 			String dt = "..";
-			if(val.reported_size > sz && sz > 0) {
+			if(val.reference) {
+				n = 1;
+				dt.Clear();
+			}
+			else
+			if(val.reported_size > sz && sz > 0 && val.array) {
 				n = val.reported_size / sz;
 				if(n <= 40)
 					dt.Clear();
@@ -143,7 +152,7 @@ void Pdb::Visualise(Visual& result, Pdb::Val val, dword flags)
 			for(int i = 0; i < n; i++) {
 				if(i)
 					result.Cat(", ", SGray);
-				Visualise(result, DeRef(val), flags | MEMBER);
+				Visualise(result, DeRef(val), flags | (val.reference ? 0 : MEMBER));
 				val.address += sz;
 				if(Byte(val.address) < 0) {
 					dt.Clear();
@@ -326,7 +335,7 @@ Pdb::Visual Pdb::Visualise(const String& exp, dword flags)
 
 Size Pdb::VisualPart::GetSize() const
 {
-	return GetTextSize(*text < 32 ? "MM" : ~text, StdFont());
+	return GetTextSize(*text && *text < 32 ? "MM" : ~text, StdFont());
 }
 
 Size Pdb::VisualDisplay::GetStdSize(const Value& q) const

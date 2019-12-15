@@ -5,6 +5,7 @@
 #include <ScatterDraw/Pedantic.h>
 
 namespace Upp {
+using namespace Eigen;
 
 struct Equation_functor : NonLinearOptimizationFunctor<double> {
 	DataSource *series;
@@ -624,6 +625,7 @@ INITBLOCK {
 	ExplicitEquation::Register<FourierEquation4>("FourierEquation4");
 	ExplicitEquation::Register<WeibullEquation>("WeibullEquation");
 	ExplicitEquation::Register<WeibullCumulativeEquation>("WeibullCumulativeEquation");
+	ExplicitEquation::Register<NormalEquation>("NormalEquation");
 }
 
 }
