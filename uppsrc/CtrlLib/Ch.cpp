@@ -134,14 +134,14 @@ Image MakeElement(Size sz, double radius, const Image& face, double border_width
 	if(!IsNull(border_color))
 		w.Stroke(border_width, border_color);
 	Image m = w;
-	Point p1(radius + border_width, radius + border_width);
+	Point p1(int(radius + border_width), int(radius + border_width));
 	SetHotSpots(m, p1, (Point)r.BottomRight() - p1 - Point(1, 1));
 	return m;
 }
 
 Image MakeButton(int radius, const Image& face, double border_width, Color border_color, dword corner)
 {
-	int q = radius + border_width + DPI(16);
+	double q = radius + border_width + DPI(16);
 	return MakeElement(Size(q, q), radius, face, border_width, border_color, [&](Painter& w, const Rectf& r) {
 		RoundedRect(w, r, radius, radius, corner);
 	});
@@ -384,7 +384,7 @@ void ChSynthetic(Image button100x100[4], Color text[4])
 			                                               CTRL_HOT, 2,
 			                                               CTRL_PRESSED, 8,
 			                                               -8)), DPI(1), ink, CORNER_TOP_LEFT|CORNER_TOP_RIGHT);
-			s.first[i] = s.last[i] = s.both[i] = s.normal[i] = ChHot(Crop(t, 0, 0, t.GetWidth(), t.GetHeight() - DPI(2)), DPI(3));
+			s.first[i] = s.last[i] = s.both[i] = s.normal[i] = ChHot(Crop(t, 0, 0, t.GetWidth(), t.GetHeight() - DPI(3)), DPI(3));
 			s.margin = 0;
 			s.sel = Rect(0, DPI(1), 0, DPI(1));
 			s.extendleft = DPI(2);
@@ -393,35 +393,25 @@ void ChSynthetic(Image button100x100[4], Color text[4])
 	}
 }
 
-void ChStdSkin()
+void ChBaseSkin()
 {
 	ChSysInit();
-	
+	GUI_GlobalStyle_Write(GUISTYLE_XP);
+	GUI_PopUpEffect_Write(Ctrl::IsCompositedGui() ? GUIEFFECT_NONE : GUIEFFECT_SLIDE);
+	ColoredOverride(CtrlsImg::Iml(), CtrlsImg::Iml());
+}
+
+void ChStdSkin()
+{
 	ColoredOverride(CtrlsImg::Iml(), CtrlsImg::Iml());
 
-/*
-	Gtk_New("radiobutton radio");
-	SOImages(CtrlsImg::I_S0, GTK_STATE_FLAG_NORMAL);
-	SOImages(CtrlsImg::I_S1, GTK_STATE_FLAG_CHECKED);
-	Gtk_New("checkbutton check");
-	SOImages(CtrlsImg::I_O0, GTK_STATE_FLAG_NORMAL);
-	SOImages(CtrlsImg::I_O1, GTK_STATE_FLAG_CHECKED);
-	SOImages(CtrlsImg::I_O2, GTK_STATE_FLAG_INCONSISTENT);
-
-	CtrlImg::Set(CtrlImg::I_MenuCheck0, CtrlsImg::O0());
-	CtrlImg::Set(CtrlImg::I_MenuCheck1, CtrlsImg::O1());
-	CtrlImg::Set(CtrlImg::I_MenuRadio0, CtrlsImg::S0());
-	CtrlImg::Set(CtrlImg::I_MenuRadio1, CtrlsImg::S1());
-*/
 	for(int i = 0; i < 6; i++)
 		CtrlsImg::Set(CtrlsImg::I_DA + i, CtrlsImg::Get(CtrlsImg::I_kDA + i));
-
 		
 	int c = DPI(16);
 
 	Color text[4];
-	Color face[4];
-	Image button[4];
+	Image button[4], sbutton[4];
 	auto Adjust = [](Color c, int adj) {
 		return Color(clamp(c.GetR() + adj, 0, 255),
 		             clamp(c.GetG() + adj, 0, 255),
@@ -441,7 +431,8 @@ void ChStdSkin()
 				s.look[i] = MakeButton(roundness, f, DPI(1 + pass), border);
 				text[i] = s.monocolor[i] = s.textcolor[i] = ink;
 				if(pass == 0) {
-					button[i] = MakeButton(DPI(1), f, DPI(1 + pass), border);
+					sbutton[i] = MakeButton(DPI(3), f, DPI(1), border);
+					button[i] = MakeButton(DPI(1), f, DPI(1), border);
 					{
 						for(int opt = 0; opt < 2; opt++) {
 							ImagePainter p(c, c);
@@ -462,15 +453,15 @@ void ChStdSkin()
 							if(chk == 1)
 								p.Move(4, 8).Line(7, 11).Line(12, 5).Stroke(2, ink);
 							if(chk == 2)
-								p.Rectangle(4, 4, 8, 8).Fill(border);
+								p.Rectangle(4, 7, 8, 2).Fill(ink);
 							CtrlsImg::Set(decode(chk, 0, CtrlsImg::I_O0, 1, CtrlsImg::I_O1, CtrlsImg::I_O2) + i, p);
 						}
 					}
 				}
 			}
 		}
-		
-		ChSynthetic(button, text);
+
+		ChSynthetic(sbutton, text);
 
 		{
 			auto& s = ToolButton::StyleDefault().Write();
@@ -492,7 +483,7 @@ void ChStdSkin()
 		ScrollBar::Style& s = ScrollBar::StyleDefault().Write();
 		ImagePainter p(c, c);
 		p.Rectangle(0, 0, c, c).Fill(0, 0, SColorFace(), c, 0, SColorPaper());
-		Image vtrough = p; // WithLeftLine(p, border);
+		Image vtrough = p;
 
 		for(int status = CTRL_NORMAL; status <= CTRL_DISABLED; status++) {
 			s.hupper[status] = s.hlower[status] = ChHot(RotateClockwise(vtrough));
@@ -504,5 +495,20 @@ void ChStdSkin()
 
 	GUI_PopUpEffect_Write(Ctrl::IsCompositedGui() ? GUIEFFECT_NONE : GUIEFFECT_SLIDE);
 }
+
+#ifdef GUI_X11
+
+void ChHostSkin()
+{
+	int h = Ctrl::GetPrimaryScreenArea().Height();
+	Font::SetDefaultFont(Arial(h > 1300 ? 26 : h > 800 ? 14 : 12));
+	SColorFace_Write(Color(242, 241, 240));
+	SColorMenu_Write(Color(242, 241, 240));
+	SColorHighlight_Write(Color(50, 50, 250));
+
+	ChStdSkin();
+}
+
+#endif
 
 }
