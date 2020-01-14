@@ -110,6 +110,20 @@ Image CairoImage(GtkStyleContext *ctx, int cx = 40, int cy = 32)
 	});
 }
 
+Color GetInkColor(GtkStyleContext *ctx, dword flags)
+{
+	GdkRGBA color;
+	gtk_style_context_get_color(ctx, (GtkStateFlags)flags, &color);
+	RGBA rgba;
+	rgba.r = int(255 * color.red);
+	rgba.g = int(255 * color.green);
+	rgba.b = int(255 * color.blue);
+	rgba.a = int(255 * color.alpha);
+	RGBA t = SColorPaper();
+	AlphaBlend(&t, &rgba, 1);
+	return t;
+}
+
 #if GTK_CHECK_VERSION(3, 20, 0)
 
 static GtkStyleContext *sCtx = NULL;
@@ -176,23 +190,6 @@ void Gtk_New(const char *name, int state = 0, dword flags = 0)
 	sCurrentSize.cy = min_height;
 }
 
-/*
-bool GtkStyleBool(const char *name)
-{
-	return false;
-	gboolean b = false;
-	gtk_style_context_get(sCtx, gtk_style_context_get_state(sCtx), name, &b, NULL);
-	return b;
-}
-
-int GtkStyleInt(const char *name)
-{
-	gint n = 0;
-	gtk_style_context_get(sCtx, gtk_style_context_get_state(sCtx), name, &n, NULL);
-	return n;
-}
-*/
-
 Size GtkSize()
 {
 	return sCurrentSize;
@@ -206,24 +203,17 @@ void GtkSize(Size& sz)
 
 Color GetInkColor()
 {
-	GdkRGBA color;
-	gtk_style_context_get_color(sCtx, sFlags, &color);
-	RGBA rgba;
-	rgba.r = int(255 * color.red);
-	rgba.g = int(255 * color.green);
-	rgba.b = int(255 * color.blue);
-	rgba.a = int(255 * color.alpha);
-	RGBA t = SColorPaper();
-	AlphaBlend(&t, &rgba, 1);
-	return t;
+	return GetInkColor(sCtx, sFlags);
 }
 
 void SOImages(int imli, dword flags)
 {
 	for(int st = 0; st < 4; st++) {
 		Gtk_State(st, flags);
-		CtrlsImg::Set(imli++, CairoImage(16, 16, [&](cairo_t *cr) {
-			gtk_render_check(sCtx, cr, 0, 0, 16, 16);
+		CtrlsImg::Set(imli++, CairoImage(14, 14, [&](cairo_t *cr) {
+			gtk_render_background(sCtx, cr, 0, 0, 14, 14);
+			gtk_render_frame(sCtx, cr,  0, 0, 14, 14);
+			gtk_render_check(sCtx, cr, 0, 0, 14, 14);
 		}));
 	}
 }
@@ -275,14 +265,21 @@ void ChHostSkin()
 	Gtk_New("entry");
 		Gtk_State(CTRL_DISABLED);
 		SColorDisabled_Write(GetInkColor());
+		if(Diff(SColorText(), SColorDisabled()) < 30)
+			SColorDisabled_Write(Gray());
 	Gtk_New("entry selection");
 		SColorHighlight_Write(GetBackgroundColor());
 		SColorHighlightText_Write(GetInkColor());
 	Gtk_New("label.view");
 		SColorLabel_Write(GetInkColor());
+#if 0
 	Gtk_New("tooltip.background");
 		SColorInfo_Write(GetBackgroundColor());
 		SColorInfoText_Write(GetInkColor());
+#else
+	SColorInfo_Write(IsDark(SColorText()) ? LtYellow() : GrayColor(79));
+	SColorInfoText_Write(SColorText());
+#endif
 
 	ColoredOverride(CtrlsImg::Iml(), CtrlsImg::Iml());
 
@@ -355,11 +352,12 @@ void ChHostSkin()
 
 	{
 		ScrollBar::Style& s = ScrollBar::StyleDefault().Write();
-		s.through = true;
-		static GtkWidget *proto = (GtkWidget *)gtk_scrollbar_new(GTK_ORIENTATION_HORIZONTAL, NULL); // to get style params
-		gboolean stepper;
-		gint minslider;
-		gtk_widget_style_get(proto, "has-backward-stepper", &stepper, "min-slider-length", &minslider, NULL);
+		static gboolean stepper;
+		static gint minslider;
+		ONCELOCK {
+			static GtkWidget *proto = (GtkWidget *)gtk_scrollbar_new(GTK_ORIENTATION_HORIZONTAL, NULL); // to get style params
+			gtk_widget_style_get(proto, "has-backward-stepper", &stepper, "min-slider-length", &minslider, NULL);
+		}
 		if(!stepper)
 			s.arrowsize = 0;
 		Gtk_New("scrollbar.horizontal.bottom");
@@ -383,8 +381,8 @@ void ChHostSkin()
 			Over(m, CairoImage(sz.cx, sz.cy));
 			Gtk_New("scrollbar.horizontal.bottom contents trough", status);
 			Over(m, CairoImage(sz.cx, sz.cy));
-			s.hupper[status] = s.hlower[status] = ChHot(m);
-			s.vupper[status] = s.vlower[status] = ChHot(RotateAntiClockwise(m)); // we have problems getting this right for vertical
+			s.hupper[status] = s.hlower[status] = WithHotSpot(m, CH_SCROLLBAR_IMAGE, 0);;
+			s.vupper[status] = s.vlower[status] = WithHotSpot(RotateAntiClockwise(m), CH_SCROLLBAR_IMAGE, 0); // we have problems getting this right for vertical
 			Gtk_New("scrollbar.horizontal.bottom contents trough slider", status);
 			Image thumb = CairoImage(sz.cx, sz.cy);
 			s.hthumb[status] = WithHotSpot(thumb, CH_SCROLLBAR_IMAGE, 0);
@@ -397,7 +395,7 @@ void ChHostSkin()
 		s.pullshift.y = 0;
 
 		Gtk_New("menu");
-		Image m = CairoImage(32, 32);
+		Image m = CairoImage(128, 64);
 		s.pullshift.y = 0;
 		int mg = DPI(2);
 		s.popupframe = WithHotSpot(m, mg, mg);
@@ -416,13 +414,19 @@ void ChHostSkin()
 			s.menutext = IsDark(c) ? White() : Black();
 		s.item = Hot3(CairoImage(32, 16));
 		
+		m = CreateImage(Size(DPI(32), DPI(16)), SColorFace());
+		Gtk_New("frame");
+		Over(m, CairoImage(DPI(32), DPI(16)));
+		Gtk_New("frame border");
+		Over(m, CairoImage(DPI(32), DPI(16)));
 		Gtk_New("menubar");
-		s.look = Hot3(CairoImage(32, 16));
+		Over(m, CairoImage(DPI(32), DPI(16)));
+		s.look = Hot3(m);
 		Color dk = SColorText();
 		Color wh = SColorPaper();
 		if(IsDark(wh))
 			Swap(dk, wh);
-		s.topitemtext[0] = IsDark(AvgColor(sCurrentImage)) ? wh : dk;
+		s.topitemtext[0] = IsDark(AvgColor(m)) ? wh : dk;
 		s.topitem[1] = s.topitem[0] = Null;
 		s.topitemtext[1] = s.topitemtext[0];
 		Gtk_New("menubar menuitem", CTRL_HOT);
@@ -471,6 +475,34 @@ Image GtkThemeIcon(const char *name, int rsz)
 void ChHostSkin()
 {
 	SetupFont();
+#if 0
+	static Color paper;
+	ONCELOCK {
+		GtkStyleContext *ctx = gtk_widget_get_style_context((GtkWidget *)gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0));
+		gtk_style_context_set_state(ctx, GTK_STATE_FLAG_NORMAL);
+		paper = AvgColor(CairoImage(ctx));
+		SetChameleonSample(CairoImage(ctx));
+		DDUMP(paper);
+	}
+	if(IsDark(paper)) {
+		SColorText_Write(White());
+		SColorPaper_Write(Black());
+		SColorMenuText_Write(White());
+		SColorFace_Write(GrayColor(60));
+		SColorMenu_Write(GrayColor(70));
+		SColorHighlight_Write(GrayColor(120));
+		SColorInfo_Write(GrayColor(79));
+		SColorInfoText_Write(SColorText());
+	}
+	else
+#endif
+	{
+		SColorFace_Write(Color(242, 241, 240));
+		SColorMenu_Write(Color(242, 241, 240));
+		SColorHighlight_Write(Color(50, 50, 250));
+	}
+
+	ChStdSkin();
 }
 
 #endif

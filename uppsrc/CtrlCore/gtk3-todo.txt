@@ -1,20 +1,20 @@
 - Issue with editfield text clipping in the right
 - Remove warnings
-- Test dark theme
-- Test rect theme
 - DropChoice STDSIZE (.TopPosZ(10))
 - LeftRoundness with DropChoice (DropChoiceRdO)
-- 3.8 theme
-- test DateTimeCtrl in dark mode
-- check CtrlCore/Ctrl.tpp
-- Check FileSel
-- tooltip issue
+- DarkCold: problem slight problem with scrollbars
+- Pushbutton push does not look nice
+- Disabled empty combobox (FileSel::SelectDir) does not look nice
+- Problem with radio buttons in StdStyle - perhaps too big?
+- ide menu in X11 ch
+- disabled combobox issue
+- OpenGL
 
 NTH:
 - spinbutton cosmetics
-
-PROBABLY DONE:
-- Problem with hot3 in scrollbar horizontal (check in SD)
+- Redmond scrollbars width
+- Improve scrollbars button borders
+- Error state (red) EditField cosmetics
 
 DONE:
 
@@ -36,7 +36,7 @@ DONE:
 - cxZ  Uword - wrong caret
 - Combobox appearance issues (minor, round corners broken on the left)
 - spinbuttons in UWord
-- read-only dropchoice left color
+- read-only dropchoice left colorGUI
 - ColorPopup background
 - Fix IsPainting
 - Header synthetise
@@ -55,3 +55,16 @@ DONE:
 - Blue Menta ugly scrollbars (round)
 - CleanTheme for X11
 - libgtk-3-dev to buildrequires
+- Test dark theme
+- Test rect theme
+- Check FileSel
+- a lot of work in Redmond
+- check CtrlCore/Ctrl.tpp
+- tooltip issue
+- test DateTimeCtrl in dark mode
+- 3.8 theme
+- PopupInfo issue
+- FileSel icons for Video etc
+- ColumnList selected item background (Mint-X)
+- disabled color in Breeze-Dark
+- Problem with hot3 in scrollbar horizontal (check in SD)
