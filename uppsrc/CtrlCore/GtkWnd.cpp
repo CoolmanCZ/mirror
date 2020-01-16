@@ -14,8 +14,10 @@ Vector<Ctrl::Win> Ctrl::wins;
 
 Ptr<Ctrl>         Ctrl::activeCtrl;
 
-int        Ctrl::WndCaretTime;
-bool       Ctrl::WndCaretVisible;
+int               Ctrl::WndCaretTime;
+bool              Ctrl::WndCaretVisible;
+
+bool              Ctrl::invalids;
 
 int Ctrl::FindId(int id)
 {
@@ -394,6 +396,8 @@ bool Ctrl::SetWndFocus()
 	return true;
 }
 
+void WakeUpGuiThread();
+
 void Ctrl::WndInvalidateRect(const Rect& r)
 {
 	GuiLock __;
@@ -407,8 +411,24 @@ void Ctrl::WndInvalidateRect(const Rect& r)
 	}
 	else
 		rr = r;
-	
-	gdk_window_invalidate_rect(gdk(), GdkRect(rr), TRUE);
+
+	// as gtk3 dropped thread locking, we need to push invalid rectangles onto main loop
+	for(Win& win : wins) {
+		if(win.ctrl == this) {
+			if(win.invalid.GetCount() && win.invalid[0].right > 99999 && win.invalid[0].bottom > 99999)
+				return;
+			if(win.invalid.GetCount() > 200) { // keep things sane
+				win.invalid.Clear();
+				win.invalid.Add(Rect(0, 0, 100000, 100000));
+			}
+			else
+				win.invalid.Add(rr);
+			if(!invalids) {
+				invalids = true;
+				WakeUpGuiThread();
+			}
+		}
+	}
 }
 
 void  Ctrl::WndScrollView(const Rect& r, int dx, int dy)
@@ -500,13 +520,29 @@ ViewDraw::ViewDraw(Ctrl *ctrl)
 {
 	EnterGuiMutex();
 	Ctrl *top = ctrl->GetTopCtrl();
+#if GTK_CHECK_VERSION(3, 22, 0)
+	cairo_rectangle_int_t r;
+	r.x = r.y = 0;
+	r.width = r.height = 100000;
+	cairo_region_t *rg = cairo_region_create_rectangle(&r);
+	ctx = gdk_window_begin_draw_frame(top->gdk(), rg);
+	cairo_region_destroy(rg);
+	cr = gdk_drawing_context_get_cairo_context(ctx);
+#else
 	cr = gdk_cairo_create(top->gdk());
+#endif
+	cairo_scale(cr, Ctrl::LSC(1), Ctrl::LSC(1));
 	Clipoff(ctrl->GetScreenView() - top->GetScreenRect().TopLeft());
 }
 
 ViewDraw::~ViewDraw()
 {
+	FlushText();
+#if GTK_CHECK_VERSION(3, 22, 0)
+	gdk_window_end_draw_frame(gdk_drawing_context_get_window(ctx), ctx);
+#else
 	cairo_destroy(cr);
+#endif
 	LeaveGuiMutex();
 }
 
