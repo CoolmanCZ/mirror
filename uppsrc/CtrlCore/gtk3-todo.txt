@@ -1,19 +1,8 @@
-- Possible issue with Capture (e.g. ide about box)
-
-- Issue with editfield text clipping in the right
-- DropChoice STDSIZE (.TopPosZ(10))
-- LeftRoundness with DropChoice (DropChoiceRdO)
 - DnD crash?
 - GUILock docs
 
 CH:
 - Redmond scrollbars width
-
-- Improve scrollbars button borders
-
-- spinbutton cosmetics
-- Pushbutton push does not look nice
-- DarkCold: problem slight problem with scrollbars
 
 DONE:
 
@@ -26,7 +15,7 @@ DONE:
 - toolbar button highlight
 - correct checks in menu
 - uword cannot be resized smaller
-- Scrollbar margins (better fit for slider)
+- Scrollbar margins (better fit for slider)i
 - Scrollbar Correct minsize, barsize...
 - FileSelector
 - Mint-Y disabled color is wrong
@@ -76,3 +65,19 @@ DONE:
 - TrayIconGtk warnings
 - Disabled empty combobox (FileSel::SelectDir) does not look nice
 - Error state (red) EditField cosmetics
+- Pushbutton push does not look nice
+- DropChoice<EditString>::Error problem
+- DarkCold: problem slight problem with scrollbars
+- Improve scrollbars button borders
+- Scrollbars disabled monocolor
+- spinbutton cosmetics
+- ide missing vertical line
+- DropChoice STDSIZE (.TopPosZ(10))
+- LeftRoundness with DropChoice (DropChoiceRdO)
+- Improve progress?
+- EditDate / EditTime problems
+- Ide split buttons look unexpected
+- Issue with editfield text clipping in the right
+- Possible issue with Capture (e.g. ide about box)
+- WithDropChoice ch issue (again...)
+- Problem with multibutton is back again

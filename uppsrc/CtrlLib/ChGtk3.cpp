@@ -379,7 +379,7 @@ void ChHostSkin()
 			Gtk_New("scrollbar.horizontal.bottom contents trough slider", status);
 			Image thumb = CairoImage(sz.cx, sz.cy);
 			s.hthumb[status] = WithHotSpot(thumb, CH_SCROLLBAR_IMAGE, 0);
-			s.vthumb[status] = WithHotSpot(RotateAntiClockwise(thumb), CH_SCROLLBAR_IMAGE, 0);
+			s.vthumb[status] = WithHotSpot(RotateClockwise(thumb), CH_SCROLLBAR_IMAGE, 0);
 		}
 	}
 	
@@ -427,6 +427,8 @@ void ChHostSkin()
 		s.topitem[2] = Hot3(CairoImage(32, 16));
 		s.topitemtext[2] = GetInkColor();
 	}
+
+	SwapOKCancel_Write(Environment().Get("KDE_FULL_SESSION", String()) != "true");
 
 	Gtk_Free();
 }
