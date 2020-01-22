@@ -1,9 +1,3 @@
-- DnD crash?
-- GUILock docs
-
-CH:
-- Redmond scrollbars width
-
 DONE:
 
 - Resizing delay
@@ -81,3 +75,4 @@ DONE:
 - Possible issue with Capture (e.g. ide about box)
 - WithDropChoice ch issue (again...)
 - Problem with multibutton is back again
+- Redmond scrollbars width
