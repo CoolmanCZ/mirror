@@ -127,7 +127,7 @@ void GitMerging::Merge()
 {
 	if (initdone) {
 		int tab = tabs.Get();
-		merge[tab].ExecuteMerge();
+		merge[tab].ExecuteMerge(~commitsign);
 	}
 }
 
@@ -329,7 +329,7 @@ void GitMerge::ShowMerge()
 	}
 }
 
-void GitMerge::ExecuteMerge()
+void GitMerge::ExecuteMerge(bool signoff)
 {
 	if (IsCommitList()) {
 		Exclamation("You have to commit or stash the changes before merge!");
@@ -350,6 +350,8 @@ void GitMerge::ExecuteMerge()
 
 	if (!errorcode && mb.commit.Get() == 1) {
 		String message = Format("Merge remote-tracking branch '%s'", mergefrom);
+		if (signoff)
+			message.Cat() << Format("\nSigned-off-by: %s <%s>\n", GetGitConfig(true, "user.name"), GetGitConfig(true, "user.email"));
 		Vector<String> parameters;
 		String msgpath;
 		errorcode = EditCommitMessage(message, parameters, msgpath);

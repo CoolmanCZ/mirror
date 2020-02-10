@@ -222,6 +222,12 @@ struct Git {
 	}
 
 	Git& GetGitConfig(bool local = true);
+	Git& GetGitConfig(bool local, const Upp::String& name, Upp::String& value);
+	Upp::String GetGitConfig(bool local, const Upp::String& name) {
+		Upp::String value;
+		GetGitConfig(local, name, value);
+		return value;
+	}
 	Git& SetGitConfig(bool local, char type, const Upp::String& name, const Upp::String& value);
 
 	Git& GetDiff(int type);

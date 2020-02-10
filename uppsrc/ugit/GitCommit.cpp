@@ -130,11 +130,11 @@ void GitCommitting::Commit()
 		if (~commitall) {
 			for (int i = 0; i < commit.GetCount(); ++i) {
 				tabs.Set(i);
-				commit[i].ExecuteCommit();
+				commit[i].ExecuteCommit(~commitsign);
 			}
 		} else {
 			int tab = tabs.Get();
-			commit[tab].ExecuteCommit();
+			commit[tab].ExecuteCommit(~commitsign);
 		}
 	}
 }
@@ -196,7 +196,7 @@ GitCommit::GitCommit()
 	GIT_FILE="GIT_FILE";
 
 	diff.Horz(diffctrl, cf);
-	diff.SetPos(7000);
+	diff.SetPos(8000);
 
 	splitter.Horz(diff, cmd);
 	splitter.Zoom(0);
@@ -592,7 +592,7 @@ void GitCommit::ShowCommit()
 	ToggleDiffType();
 }
 
-void GitCommit::ExecuteCommit()
+void GitCommit::ExecuteCommit(bool signoff)
 {
 	if (GetGitDir().IsEmpty())
 		return;
@@ -605,6 +605,9 @@ void GitCommit::ExecuteCommit()
 	}
 
 	String message;
+	if (signoff)
+		message = Format("\nSigned-off-by: %s <%s>\n", GetGitConfig(true, "user.name"), GetGitConfig(true, "user.email"));
+
 	if (parameters.IsEmpty()) {
 		if (!IsCommitList()) {
 			Exclamation("[= Commit canceled!&& There aren't files for the commit!]");

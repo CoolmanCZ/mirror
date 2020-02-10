@@ -41,7 +41,7 @@ struct GitMerge : Upp::WithGitCommitLayout<Upp::ParentCtrl>, public Git {
 	virtual bool Key(Upp::dword key, int count);
 	void BranchChangeRow();
 	virtual void ProcessCommandOutput();
-	void ExecuteMerge();
+	void ExecuteMerge(bool signoff);
 	void SaveDiff();
 
 	GitMerge();

@@ -312,6 +312,19 @@ Git& Git::GetGitConfig(bool local)
 	return *this;
 }
 
+Git& Git::GetGitConfig(bool local, const String& name, String& value)
+{
+	String command = "config --global";
+	if (local)
+		command = "config --local";
+	command.Cat() << " --get " << name;
+
+	Vector<String> output = CmdExecute(command).GetOutput();
+	if (!GetCmdErrorCode() && output.GetCount() > 0)
+		value = output[0];
+	return *this;
+}
+
 Git& Git::SetGitConfig(bool local, char type, const String& name, const String& value)
 {
 	String command = "config";

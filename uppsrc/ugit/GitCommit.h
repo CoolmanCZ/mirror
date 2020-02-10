@@ -121,7 +121,7 @@ struct GitCommit : Upp::WithGitCommitLayout<Upp::ParentCtrl>, public Git {
 	virtual bool Key(Upp::dword key, int count);
 	virtual void ProcessCommandOutput();
 	void ShowCommit();
-	void ExecuteCommit();
+	void ExecuteCommit(bool signoff);
 	void SaveDiff();
 
 	GitCommit();

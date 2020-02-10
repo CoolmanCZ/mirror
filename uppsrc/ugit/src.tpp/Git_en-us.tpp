@@ -435,6 +435,17 @@ ol]_[*@3 local])&]
 option&]
 [s3;%% &]
 [s4; &]
+[s5;:Git`:`:GetGitConfig`(bool`,const Upp`:`:String`&`,Upp`:`:String`&`): [_^Git^ Git][@(0.0.255) `&
+]_[* GetGitConfig]([@(0.0.255) bool]_[*@3 local], [@(0.0.255) const]_[_^Upp`:`:String^ Upp`:
+:String][@(0.0.255) `&]_[*@3 name], [_^Upp`:`:String^ Upp`::String][@(0.0.255) `&]_[*@3 value
+])&]
+[s2; Get GIT configuration option value for given option name.&]
+[s7; [*@3 local]-|[*@3 true] `- repository, [*@3 false] `- global configuration 
+option&]
+[s7; [*@3 name]-|Option name&]
+[s7;%% [%-*@3 value]-|Option value&]
+[s3;%% &]
+[s4; &]
 [s5;:Git`:`:SetGitConfig`(bool`,char`,const Upp`:`:String`&`,const Upp`:`:String`&`): [_^Git^ G
 it][@(0.0.255) `&]_[* SetGitConfig]([@(0.0.255) bool]_[*@3 local], [@(0.0.255) char]_[*@3 typ
 e], [@(0.0.255) const]_[_^Upp`:`:String^ String][@(0.0.255) `&]_[*@3 name], 
