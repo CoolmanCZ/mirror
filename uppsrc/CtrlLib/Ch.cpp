@@ -128,6 +128,7 @@ Image MakeElement(Size sz, double radius, const Image& face, double border_width
 	Rectf dr = r.Deflated(border_width / 2.0);
 	if(!IsNull(face)) {
 		shape(w, dr);
+		w.Fill(SColorFace());
 		FillImage(w, r.Deflated(border_width / 2.0 - 1), face);
 	}
 	shape(w, dr);
@@ -282,28 +283,36 @@ Color AdjustColor(Color c, int adj) {
 	             clamp(c.GetB() + adj, 0, 255));
 }
 
-void ChSynthetic(Image button100x100[4], Color text[4])
+void ChSynthetic(Image *button100x100, Color *text, bool macos)
 {
 	int roundness = DPI(3);
+	int roundness2 = roundness;
 	Color ink = SColorText();
+	int lw = macos ? 1 : DPI(1);
 	for(int i = 0; i < 4; i++) {
 		Image m = button100x100[i];
-		auto Espots = [](const Image& m) { return WithHotSpots(m, DPI(3), DPI(1), CH_EDITFIELD_IMAGE, DPI(3)); };
+		Image m2 = macos ? button100x100[i + 4] : m;
+		auto Espots = [=](const Image& m) { return WithHotSpots(m, DPI(3), DPI(1), CH_EDITFIELD_IMAGE, DPI(3)); };
+		auto Face = [](int adj) { return AdjustColor(SColorFace(), adj); };
 		if(i == 0) {
 			ink = GetInk(m);
-			roundness = GetRoundness(m) ? DPI(3) : 0;
-			CtrlsImg::Set(CtrlsImg::I_EFE, Espots(MakeButton(roundness, SColorPaper(), DPI(1), ink)));
-			CtrlsImg::Set(CtrlsImg::I_VE, WithHotSpots(MakeButton(DPI(0), SColorPaper(), DPI(1), ink), DPI(2), DPI(2), 0, 0));
-			LabelBox::SetLook(WithHotSpots(MakeButton(2 * roundness / 3, Image(), DPI(1), ink), DPI(3), DPI(3), 0, 0));
+			if(macos && IsDarkTheme())
+				ink = Gray();
+			roundness = macos ? DPI(3) : GetRoundness(m) ? DPI(3) : 0;
+			roundness2 = macos ? 0 : roundness;
+			CtrlsImg::Set(CtrlsImg::I_EFE, Espots(MakeButton(roundness2, SColorPaper(), lw, ink)));
+			CtrlsImg::Set(CtrlsImg::I_VE, WithHotSpots(MakeButton(DPI(0), SColorPaper(), lw, ink), DPI(2), DPI(2), 0, 0));
+			LabelBox::SetLook(WithHotSpots(MakeButton(2 * roundness / 3, Image(), lw, ink), DPI(3), DPI(3), 0, 0));
 		}
 		Size sz = m.GetSize();
 		m = Crop(m, sz.cx / 8, sz.cy / 8, 6 * sz.cx / 8, 6 * sz.cy / 8);
+		m2 = Crop(m2, sz.cx / 8, sz.cy / 8, 6 * sz.cx / 8, 6 * sz.cy / 8);
 		{
 			EditField::Style& s = EditField::StyleDefault().Write();
 			s.activeedge = true;
-			s.edge[i] = Espots(MakeButton(roundness, i == CTRL_DISABLED ? SColorFace() : SColorPaper(), DPI(1), ink));
+			s.edge[i] = Espots(MakeButton(roundness2, i == CTRL_DISABLED ? SColorFace() : SColorPaper(), lw, ink));
 			if(i == 0)
-				s.coloredge = Espots(MakeButton(roundness, Black(), DPI(2), Null));
+				s.coloredge = Espots(MakeButton(roundness2, Black(), DPI(2), Null));
 		}
 		{
 			auto Set = [&](Button::Style& s, const Image& arrow = Null, Color ink2 = Null, Color border = Null) {
@@ -328,25 +337,25 @@ void ChSynthetic(Image button100x100[4], Color text[4])
 			s.clipedge = true;
 			s.border = s.trivialborder = 0;
 
-			s.left[i] = MakeButton(roundness, m, DPI(1), ink, CORNER_TOP_LEFT|CORNER_BOTTOM_LEFT);
-			s.trivial[i] = s.look[i] = s.right[i] = MakeButton(roundness, m, DPI(1), ink, CORNER_TOP_RIGHT|CORNER_BOTTOM_RIGHT);
+			s.left[i] = MakeButton(roundness, m2, lw, ink, CORNER_TOP_LEFT|CORNER_BOTTOM_LEFT);
+			s.trivial[i] = s.look[i] = s.right[i] = MakeButton(roundness, m2, lw, ink, CORNER_TOP_RIGHT|CORNER_BOTTOM_RIGHT);
 			if(i == 0)
-				s.coloredge = WithHotSpots(MakeButton(roundness, Black(), DPI(2), Null), DPI(3), DPI(1), 0, 0);
+				s.coloredge = WithHotSpots(MakeButton(roundness, Black(), lw, Null), DPI(3), lw, 0, 0);
 			auto Middle = [&](Image m) {
 				ImageBuffer ib(m);
-				for(int y = 0; y < DPI(1); y++)
+				for(int y = 0; y < lw; y++)
 					for(int x = 0; x < ib.GetWidth(); x++) {
 						ib[y][x] = ink;
 						ib[ib.GetHeight() - y - 1][x] = ink;
 					}
 				return WithHotSpot(ib, DPI(1), DPI(1));
 			};
-			s.lmiddle[i] = Middle(WithRightLine(m, ink));
-			s.rmiddle[i] = Middle(WithLeftLine(m, ink));
-			s.monocolor[i] = s.fmonocolor[i] = text[i];
+			s.lmiddle[i] = Middle(WithRightLine(m2, ink, lw));
+			s.rmiddle[i] = Middle(WithLeftLine(m2, ink, lw));
+			s.monocolor[i] = s.fmonocolor[i] = text[macos ? i + 4 : i];
 			for(int i = 0; i < 4; i++)
-				s.edge[i] = EditField::StyleDefault().edge[i];
-			s.margin = Rect(DPI(3), 2, DPI(1), 2);
+				s.edge[i] = Espots(MakeButton(roundness, i == CTRL_DISABLED ? SColorFace() : SColorPaper(), lw, ink));
+			s.margin = Rect(DPI(3), 2, lw, 2);
 			s.activeedge = true;
 			s.stdwidth = DPI(17);
 		}
@@ -355,7 +364,7 @@ void ChSynthetic(Image button100x100[4], Color text[4])
 			if(i == 0)
 				sp.dec = sp.inc = Button::StyleNormal();
 			auto Spin = [&](dword corners, const Image& sm) {
-				return ChLookWith(WithLeftLine(MakeButton(roundness, m, 0, Black(), corners), ink), sm, text[i]);
+				return ChLookWith(WithLeftLine(MakeButton(roundness2, m, 0, Black(), corners), ink, lw), sm, text[i]);
 			};
 			sp.inc.look[i] = Spin(CORNER_TOP_RIGHT, CtrlImg::spinup());
 			sp.dec.look[i] = Spin(CORNER_BOTTOM_RIGHT, CtrlImg::spindown());
@@ -367,8 +376,8 @@ void ChSynthetic(Image button100x100[4], Color text[4])
 			if(i == 0)
 				sp.dec = sp.inc = Button::StyleNormal();
 			auto Spin = [&](dword corners, const Image& sm, bool left) {
-				Image mm = MakeButton(roundness, m, 0, Black(), corners);
-				mm = left ? WithLeftLine(mm, ink) : WithRightLine(mm, ink);
+				Image mm = MakeButton(roundness2, m, 0, Black(), corners);
+				mm = left ? WithLeftLine(mm, ink, lw) : WithRightLine(mm, ink, lw);
 				return ChLookWith(mm, sm, text[i]);
 			};
 			sp.inc.look[i] = Spin(CORNER_TOP_RIGHT|CORNER_BOTTOM_RIGHT, CtrlImg::plus(), true);
@@ -378,15 +387,22 @@ void ChSynthetic(Image button100x100[4], Color text[4])
 		}
 		{
 			HeaderCtrl::Style& hs = HeaderCtrl::StyleDefault().Write();
-			hs.look[i] = ChHot(WithBottomLine(WithRightLine(m, ink, 1), ink));
+			Image h = m;
+			if(macos)
+				h = CreateImage(Size(10, 10), Face(decode(i, CTRL_NORMAL, 10,
+			                                                 CTRL_HOT, IsDarkTheme() ? 15 : 0,
+			                                                 CTRL_PRESSED, -5,
+			                                                 -8)));
+			hs.look[i] = ChHot(WithBottomLine(WithRightLine(h, ink, 1), ink));
 		}
 		if(i == CTRL_DISABLED) {
 			ProgressIndicator::Style& s = ProgressIndicator::StyleDefault().Write();
 			ImageBuffer ib(1, 8);
 			ImageBuffer ibb(1, 8);
+			Color c = macos ? AvgColor(button100x100[4]) : SColorHighlight();
 			for(int i = 0; i < 8; i++) {
 				int a[] = { 20, 40, 10, 0, -10, -20, -30, -40 };
-				ib[i][0] = AdjustColor(SColorHighlight(), a[i]);
+				ib[i][0] = AdjustColor(c, a[i]);
 				ibb[i][0] = Blend(SColorFace(), SColorPaper(), i * 255 / 7);
 			}
 			s.hchunk = MakeButton(roundness, Magnify(ib, 10, 1), DPI(1), ink);
@@ -395,7 +411,7 @@ void ChSynthetic(Image button100x100[4], Color text[4])
 			s.nomargins = true;
 		}
 		if(i == CTRL_NORMAL || i == CTRL_PRESSED) {
-			Image sm = MakeElement(Size(DPI(10), DPI(20)), roundness, m, DPI(1), ink, [&](Painter& w, const Rectf& r) {
+			Image sm = MakeElement(Size(DPI(10), DPI(20)), roundness, m2, lw, ink, [&](Painter& w, const Rectf& r) {
 				double cx = r.GetWidth();
 				double cy = r.GetHeight();
 				double uy = 0.4 * cy;
@@ -412,7 +428,6 @@ void ChSynthetic(Image button100x100[4], Color text[4])
 		}
 		{
 			TabCtrl::Style& s = TabCtrl::StyleDefault().Write();
-			auto Face = [](int adj) { return AdjustColor(SColorFace(), adj); };
 			s.body = MakeButton(0, Face(8), DPI(1), ink);
 			Image t = MakeButton(roundness, Face(decode(i, CTRL_NORMAL, -20,
 			                                               CTRL_HOT, 2,

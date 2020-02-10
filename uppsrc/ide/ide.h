@@ -547,7 +547,7 @@ public:
 	bool      runexternal;
 	bool      console_utf8;
 	int       consolemode;
-	bool      disable_uhd;
+	bool      disable_uhd = false;
 	String    stdout_file;
 	String    recent_stdout_file;
 
@@ -942,6 +942,7 @@ public:
 		bool  SwapSIf(const char *cref);
 		void  SwapS();
 		void  FindId(const String& id);
+		bool  OpenLink(const String& s, int pos);
 		void  ContextGoto0(int pos);
 		void  ContextGoto();
 		void  GoToLine();
