@@ -454,12 +454,18 @@ CH_STYLE(SpinButtons, Style, StyleDefault)
 	CtrlsImageLook(inc.look, CtrlsImg::I_EB, CtrlsImg::SpU(), inc.monocolor);
 	CtrlsImageLook(dec.look, CtrlsImg::I_EB, CtrlsImg::SpD(), dec.monocolor);
 	width = Zx(12);
+	over = 0;
+	onsides = false;
 }
 
 CH_STYLE(SpinButtons, Style, StyleOnSides)
 {
 	Assign(SpinButtons::StyleDefault());
 	onsides = true;
+	for(int i = 0; i < 4; i++) {
+		inc.look[i] = Button::StyleEdge().look[i];
+		dec.look[i] = Button::StyleLeftEdge().look[i];
+	}
 }
 
 void SpinButtons::FrameLayout(Rect& r)
@@ -641,7 +647,7 @@ void Option::Paint(Draw& w) {
 		              ds || IsReadOnly() ? SColorDisabled : Nvl(color, GetLabelTextColor(this)),
 		              VisibleAccessKeys() ? accesskey : 0);
 		if(HasFocus())
-			DrawFocus(w, RectC(isz.cx + DPI(2), ty - DPI(1), tsz.cx + DPI(3), tsz.cy + DPI(2)) & sz);
+			DrawFocus(w, RectC(ix + isz.cx + DPI(2), ty - DPI(1), tsz.cx + DPI(3), tsz.cy + DPI(2)) & sz);
 	}
 	
 	if(box) {
@@ -746,7 +752,7 @@ void  ButtonOption::Paint(Draw& w) {
 
 CH_STYLE(ButtonOption, Style, StyleDefault)
 {
-	const Button::Style& bs = Button::StyleNormal(); 
+	const Button::Style& bs = Button::StyleNormal();
 	for (int i = 0; i < 4; i++)
 	{
 		look[i] = bs.look[i];
@@ -757,7 +763,7 @@ CH_STYLE(ButtonOption, Style, StyleDefault)
 
 CH_STYLE(ButtonOption, Style, StyleFlat)
 {
-	const ToolButton::Style& tbs = ToolButton::StyleDefault(); 
+	const ToolButton::Style& tbs = ToolButton::StyleDefault();
 	for (int i = 0; i < 4; i++)
 	{
 		look[i] = tbs.look[i];

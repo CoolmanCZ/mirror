@@ -1,5 +1,13 @@
 #include "TestChStyle.h"
 
+#define IMAGECLASS TestImg
+#define IMAGEFILE <TestChStyle/Test.iml>
+#include <Draw/iml_header.h>
+
+#define IMAGECLASS TestImg
+#define IMAGEFILE <TestChStyle/Test.iml>
+#include <Draw/iml_source.h>
+
 void Sample::Paint(Draw& w)
 {
 	w.DrawRect(GetSize(), White());
@@ -10,7 +18,9 @@ void Sample::Paint(Draw& w)
 #ifdef _DEBUG
 //	w.DrawImage(10, 10, (Image)GetChameleonSample());
 //	w.DrawImage(200, 10, Magnify((Image)GetChameleonSample(), 4, 4));
-	w.DrawImage(200, 10, CtrlsImg::HorzPos());
+	w.DrawImage(200, 10, CtrlImg::HorzPos());
+	w.DrawImage(10, 10, TestImg::Test());
+	
 #endif
 //	ChPaint(w, 10, 10, 32, 32, GetChameleonSample());
 

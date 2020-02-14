@@ -74,9 +74,10 @@ void ChHostSkin()
 	ChReset();
 
 	GUI_GlobalStyle_Write(GUISTYLE_XP);
+	GUI_PopUpEffect_Write(GUIEFFECT_NONE);
 
 	SwapOKCancel_Write(true);
-	SColorFace_Write(CocoColor(COCO_WINDOW, White())); // ThemeBrushDialogBackgroundActive
+	SColorFace_Write(CocoColor(COCO_WINDOW, White()));
 	SColorHighlight_Write(CocoColor(COCO_SELECTEDPAPER));
 	SColorHighlightText_Write(CocoColor(COCO_SELECTEDTEXT));
 	SColorText_Write(CocoColor(COCO_TEXT));
@@ -151,6 +152,32 @@ void ChHostSkin()
 		s.paper = field(COCO_POPUPBUTTON);
 	}
 	
+	{ // U++ menu should not be used MacOS apps, but adjust some values anyway
+		MenuBar::Style& s = MenuBar::StyleDefault().Write();
+		s.pullshift.y = 0;
+		s.popupbody = SColorFace();
+		SColorMenu_Write(SColorFace());
+		s.menutext = SColorText();
+		SColorMenuText_Write(s.menutext);
+		s.itemtext = SColorText();
+		s.item = SColorHighlight();
+		s.look = SColorFace();
+		Color dk = SColorText();
+		Color wh = SColorPaper();
+		if(IsDark(wh))
+			Swap(dk, wh);
+		s.topitemtext[0] = SColorText();
+		s.topitem[1] = s.topitem[0] = Null;
+		s.topitemtext[1] = SColorText();
+		s.topitem[0] = Null;
+		s.topitem[2] = SColorHighlight();
+		s.topitemtext[2] = SColorText();
+		CtrlImg::Set(CtrlImg::I_MenuCheck0, CtrlsImg::O0());
+		CtrlImg::Set(CtrlImg::I_MenuCheck1, CtrlsImg::O1());
+		CtrlImg::Set(CtrlImg::I_MenuRadio0, CtrlsImg::S0());
+		CtrlImg::Set(CtrlImg::I_MenuRadio1, CtrlsImg::S1());
+	}
+
 	auto nsimg = [](int ii) { return CocoImg(COCO_NSIMAGE, ii); };
 	CtrlImg::Set(CtrlImg::I_information, nsimg(1));
 	CtrlImg::Set(CtrlImg::I_question, nsimg(0));

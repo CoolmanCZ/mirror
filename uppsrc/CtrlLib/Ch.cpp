@@ -4,10 +4,13 @@ namespace Upp {
 
 #define LLOG(x)  // RLOG(x)
 
+#define FIXED_COLORS
 #define IMAGECLASS CtrlsImg
 #define IMAGEFILE <CtrlLib/Ctrls.iml>
 #include <Draw/iml_source.h>
 
+// #define FIXED_COLORS
+// #define FIXED_SIZE
 #define IMAGECLASS ClassicCtrlsImg
 #define IMAGEFILE <CtrlLib/ClassicCtrls.iml>
 #include <Draw/iml_source.h>
@@ -310,7 +313,10 @@ void ChSynthetic(Image *button100x100, Color *text, bool macos)
 		{
 			EditField::Style& s = EditField::StyleDefault().Write();
 			s.activeedge = true;
-			s.edge[i] = Espots(MakeButton(roundness2, i == CTRL_DISABLED ? SColorFace() : SColorPaper(), lw, ink));
+			s.edge[i] = Espots(MakeButton(roundness2,
+			                              i == CTRL_DISABLED ? SColorFace() : SColorPaper(),
+			                              macos && i == CTRL_PRESSED ? DPI(2) : lw,
+			                              i == CTRL_PRESSED ? SColorHighlight() : ink));
 			if(i == 0)
 				s.coloredge = Espots(MakeButton(roundness2, Black(), DPI(2), Null));
 		}
@@ -340,7 +346,7 @@ void ChSynthetic(Image *button100x100, Color *text, bool macos)
 			s.left[i] = MakeButton(roundness, m2, lw, ink, CORNER_TOP_LEFT|CORNER_BOTTOM_LEFT);
 			s.trivial[i] = s.look[i] = s.right[i] = MakeButton(roundness, m2, lw, ink, CORNER_TOP_RIGHT|CORNER_BOTTOM_RIGHT);
 			if(i == 0)
-				s.coloredge = WithHotSpots(MakeButton(roundness, Black(), lw, Null), DPI(3), lw, 0, 0);
+				s.coloredge = WithHotSpots(MakeButton(roundness, Black(), macos ? lw : DPI(2), Null), DPI(3), lw, 0, 0);
 			auto Middle = [&](Image m) {
 				ImageBuffer ib(m);
 				for(int y = 0; y < lw; y++)
@@ -411,16 +417,19 @@ void ChSynthetic(Image *button100x100, Color *text, bool macos)
 			s.nomargins = true;
 		}
 		if(i == CTRL_NORMAL || i == CTRL_PRESSED) {
-			Image sm = MakeElement(Size(DPI(10), DPI(20)), roundness, m2, lw, ink, [&](Painter& w, const Rectf& r) {
+			Image sm = MakeElement(Size(DPI(10), DPI(20)), roundness,
+			                       CreateImage(Size(10, 10), GrayColor(224 - 20 * i)),
+			                       lw, ink, [&](Painter& w, const Rectf& r) {
 				double cx = r.GetWidth();
 				double cy = r.GetHeight();
 				double uy = 0.4 * cy;
+				double by = 0.85 * cy;
 				double uq = 0.5 * uy;
-				w.Move(r.left, r.top + cy)
+				w.Move(r.left, r.top + by)
 				 .Line(r.left, r.top + uy)
 				 .Quadratic(r.left, r.top + uq, r.left + cx / 2, r.top)
 				 .Quadratic(r.left + cx, r.top + uq, r.left + cx, r.top + uy)
-				 .Line(r.left + cx, r.top + cy)
+				 .Line(r.left + cx, r.top + by)
 				 .Close();
 			});
 			CtrlImg::Set(i == CTRL_PRESSED ? CtrlImg::I_hthumb1 : CtrlImg::I_hthumb, sm);
