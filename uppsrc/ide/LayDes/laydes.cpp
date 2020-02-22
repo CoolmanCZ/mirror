@@ -177,7 +177,7 @@ void LayDes::PaintLayoutItems(Draw& w, int layid, Size size, Index<int>& passed,
 		Rect r = CtrlRectZ(m.pos, size);
 		String dummy;
 		int lr = ParseLayoutRef(m.type, dummy);
-		DrawFrame(w, r, IsDarkTheme() ? Blend(Gray(), Blue()) : Blend(WhiteGray(), LtBlue()));
+		DrawFrame(w, r, Blend(SLtGray(), SCyan(), 35));
 		w.Clipoff(r);
 		if(lr < 0)
 			m.Paint(w, r.Size());
@@ -759,7 +759,7 @@ void LayDes::Group(Bar& bar, const String& group)
 	((MenuBar&)bar).LeftGap(w + 6);
 	int q = 0;
 	for(i = 0; i < type.GetCount(); i++) {
-		bar.Add(type[i], GetTypeIcon(type[i], w, h, 0, SColorFace),
+		bar.Add(type[i], GetTypeIcon(type[i], w, h, 0, SLtGray),
 		        THISBACK1(CreateCtrl, type[i]));
 		if((q++ + 2) % 16 == 0)
 			bar.Break();
@@ -781,7 +781,7 @@ void LayDes::TemplateGroup(Bar& bar, TempGroup tg)
 	((MenuBar&)bar).LeftGap(w + 2);
 	int q = 0;
 	for(i = 0; i < type.GetCount(); i++) {
-		bar.Add(type[i], GetTypeIcon(type[i], w, h, 0, SColorFace),
+		bar.Add(type[i], GetTypeIcon(type[i], w, h, 0, SLtGray),
 		        THISBACK1(CreateCtrl, tg.temp + '<' + type[i] + '>'));
 		if((q++ + 2) % 16 == 0)
 			bar.Break();
@@ -817,7 +817,7 @@ void LayDes::Template(Bar& bar, const String& temp)
 	if((q++ + 2) % 16 == 0)
 		bar.Break();
 	for(i = 0; i < type.GetCount(); i++) {
-		bar.Add(type[i], GetTypeIcon(type[i], w, h, 0, SColorFace),
+		bar.Add(type[i], GetTypeIcon(type[i], w, h, 0, SLtGray),
 		        THISBACK1(CreateCtrl, temp + '<' + type[i] + '>'));
 		if((q++ + 2) % 16 == 0)
 			bar.Break();
@@ -876,7 +876,7 @@ void LayDes::RightDown(Point p, dword keyflags)
 	if((q++ + 2) % 16 == 0)
 		menu.Break();
 	for(i = 0; i < type.GetCount(); i++) {
-		menu.Add(type[i], GetTypeIcon(type[i], w, h, 0, SColorFace),
+		menu.Add(type[i], GetTypeIcon(type[i], w, h, 0, SLtGray),
 		                  THISBACK1(CreateCtrl, type[i]));
 		if((q++ + 2) % 16 == 0)
 			menu.Break();

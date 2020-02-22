@@ -2274,19 +2274,22 @@ of callback, which is void `* in timer queue, [* this] `+ [* id]
 is used. When Ctrl is destroyed, all callbacks with [* id] in range 
 0 ... sizeof(Ctrl) are removed from timer callback queue `- this 
 ensures that no dangling callbacks are left there.&]
-[s7;i1120;a17; [%-*C@3 delay`_ms]-|Delay of callback in ms. If this 
-is 0, callback is called immediately after all pending input 
-GUI events are processed.&]
-[s7;i1120;a17; [%-*C@3 cb]-|Callback. Should be callback to Ctrl`'s 
-method.&]
-[s7;i1120;a17; [%-*C@3 id]-|id. Should be in range 0..80. U`+`+ defines 
+[s2; [%-*@3 delay`_ms][%-  is d]elay of callback in ms. If this is 0, 
+callback is called immediately after all pending input GUI events 
+are processed. Negative value means the event is periodic `- 
+it is triggered after `-delay`_ms and after being performed, 
+it is rescheduled with the same delay`_ms.&]
+[s2; [%- Identifier ][%-*@3 id] should be in range 0..80. U`+`+ defines 
 compile`-time protocol for distributing these ids. If Ctrl wants 
-to use non`-zero time callback [* id], it should define it using&]
-[s7;i1120;a17; -|[@(0.0.255) enum] [@(0.0.255) `{ ]TIMEID`_PERIODIC `= 
-[/ baseclass]`::TIMEID`_COUNT,&]
-[s7;i1120;a17; -|            TIMEID`_COUNT[@(0.0.255)  `};]&]
-[s7;i1120;a17; -|Using zero as [* id] is OK as long as you do not intend 
-to remove time callbacks using [* KillTimeCallback.]&]
+to use non`-zero time callback id, it should define it using&]
+[s2; &]
+[s2; -|enum `{ TIMEID`_PERIODIC `= [/ baseclass]`::TIMEID`_COUNT, TIMEID`_COUNT[@(0.0.255)  
+`};]&]
+[s2; &]
+[s2; -|Using zero as [* id] is OK as long as you do not intend to remove 
+time callbacks using [* KillTimeCallback. ]Alternative to using 
+id is class TimeCallback that represents whole issue as member 
+variable of Ctrl.&]
 [s3;%- &]
 [s4;%- &]
 [s5;:Ctrl`:`:KillTimeCallback`(int`):%- [@(0.0.255) void]_[* KillTimeCallback]([@(0.0.255) i
@@ -2601,7 +2604,8 @@ ize]_[*@3 sz])&]
 [s5;:Upp`:`:Ctrl`:`:SetUHDEnabled`(bool`):%- [@(0.0.255) void]_[* SetUHDEnabled]([@(0.0.255) b
 ool]_[*@3 set])&]
 [s2; Informs host platform that application is UHD ready. Default 
-is true.&]
+is true. Disabling UHD mode has to be done before GUI`_APP`_MAIN, 
+e.g. in INITBLOCK.&]
 [s3; &]
 [s4;%- &]
 [s5;:Upp`:`:Ctrl`:`:IsUHDEnabled`(`):%- [@(0.0.255) bool]_[* IsUHDEnabled]()&]
@@ -2614,7 +2618,8 @@ is true.&]
 [s2; Hints coloring and skinning algorithms that the application 
 is ready to work in dark theme mode. Currently this enables dark 
 theme in Windows (with other platforms dark theme is enabled 
-by default).&]
+by default). Default value is true. Disabling dark theme has 
+to be done before GUI`_APP`_MAIN, e.g. in INITBLOCK.&]
 [s3; &]
 [s4;%- &]
 [s5;:Upp`:`:Ctrl`:`:IsDarkThemeEnabled`(`):%- [@(0.0.255) static] [@(0.0.255) bool]_[* IsDa

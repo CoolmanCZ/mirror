@@ -5,25 +5,90 @@ namespace Upp {
 #define LLOG(x)  // RLOG(x)
 
 #define FIXED_COLORS
-#define IMAGECLASS CtrlsImg
+#define IMAGECLASS CtrlsImg // contains some default definitions
 #define IMAGEFILE <CtrlLib/Ctrls.iml>
-#include <Draw/iml_source.h>
-
-// #define FIXED_COLORS
-// #define FIXED_SIZE
-#define IMAGECLASS ClassicCtrlsImg
-#define IMAGEFILE <CtrlLib/ClassicCtrls.iml>
 #include <Draw/iml_source.h>
 
 void ChSysInit();
 
-void SbWc(Value *look)
+Color AdjustColor(Color c, int adj)
 {
-	Color wc = Blend(SColorFace(), SColorPaper(), 170);
-	look[CTRL_NORMAL] = wc;
-	look[CTRL_HOT] = wc;
-	look[CTRL_PRESSED] = SColorText();
-	look[CTRL_DISABLED] = wc;
+	return Color(clamp(c.GetR() + adj, 0, 255),
+	             clamp(c.GetG() + adj, 0, 255),
+	             clamp(c.GetB() + adj, 0, 255));
+};
+
+Color FaceColor(int adj)
+{
+	return AdjustColor(SColorFace(), adj);
+};
+
+void SyntheticTab(int i, int roundness, Color ink)
+{
+	TabCtrl::Style& s = TabCtrl::StyleDefault().Write();
+	s.body = MakeButton(0, FaceColor(8), DPI(1), ink);
+	Image t = MakeButton(roundness, FaceColor(decode(i, CTRL_NORMAL, -20,
+	                                                    CTRL_HOT, 2,
+	                                                    CTRL_PRESSED, 8,
+	                                                    -8)), DPI(1), ink,
+	                                                    CORNER_TOP_LEFT|CORNER_TOP_RIGHT);
+	s.first[i] = s.last[i] = s.both[i] = s.normal[i] = ChHot(Crop(t, 0, 0, t.GetWidth(), t.GetHeight() - DPI(3)), DPI(3));
+	s.margin = 0;
+	s.sel = Rect(0, DPI(1), 0, DPI(1));
+	s.extendleft = DPI(2);
+	s.text_color[i] = SColorText();
+}
+
+void MakeDialogIcons()
+{
+	auto MakeCircularIcon = [](Color c, const char *sign, double ssz = 0.6, Color sc = White()) -> Image
+	{
+		int sz = DPI(32);
+		ImagePainter w(sz, sz);
+		double r = 0.5 * sz;
+		w.Clear(RGBAZero());
+		w.Circle(r, r, r).Fill(Gray());
+		w.Circle(r, r, r - DPI(1)).Fill(White());
+		w.Circle(r, r, r - DPI(2)).Fill(Pointf(0.5 * r, 0.6 * r), Blend(White(), c), r, c);
+		
+		ssz *= sz;
+		Rectf sr = RectfC((sz - ssz) / 2, (sz - ssz) / 2, ssz, ssz);
+		Rectf br = GetSVGPathBoundingBox(sign);
+		double scale = sr.GetHeight() / br.GetHeight();
+		w.Translate(sr.left + (sr.Width() - br.Width() * scale) / 2, sr.top);
+		w.Scale(scale);
+		w.Translate(-br.TopLeft());
+		w.Path(sign).Stroke(2, Black()).Fill(sc);
+		
+		return w;
+	};
+
+	static const char *s_information = "M28.75 28.31 Q32.63 28.31 35.28 31.00 Q37.94 33.69 37.94 37.50 Q37.94 41.31 35.25 44.00 Q32.56 46.69 28.75 46.69 Q25.00 46.69 22.31 44.00 Q19.63 41.31 19.63 37.50 Q19.63 33.69 22.28 31.00 Q24.94 28.31 28.75 28.31 ZM32.63 57.06 L19.81 101.50 Q18.75 105.31 18.75 106.50 Q18.75 107.19 19.31 107.78 Q19.88 108.38 20.50 108.38 Q21.56 108.38 22.63 107.44 Q25.44 105.13 29.38 99.06 L31.50 100.31 Q22.06 116.75 11.44 116.75 Q7.38 116.75 4.97 114.47 Q2.56 112.19 2.56 108.69 Q2.56 106.38 3.63 102.81 L12.31 72.94 Q13.56 68.63 13.56 66.44 Q13.56 65.06 12.38 64.00 Q11.19 62.94 9.13 62.94 Q8.19 62.94 6.88 63.00 L7.69 60.50 L28.88 57.06 Z";
+	CtrlImg::Set(CtrlImg::I_information, MakeCircularIcon(Color(85, 127, 200), s_information, 0.6, Color(243, 255, 211)));
+	static const char *s_question = "M15.81 79.13 Q17.56 81.00 18.63 83.16 Q19.69 85.31 19.69 87.50 Q19.69 89.00 19.13 90.28 Q18.56 91.56 17.59 92.50 Q16.63 93.44 15.31 93.97 Q14.00 94.50 12.44 94.50 Q11.00 94.50 9.69 94.03 Q8.38 93.56 7.31 92.63 Q6.25 91.69 5.63 90.31 Q5.00 88.94 5.00 87.06 Q5.00 84.25 6.59 81.09 Q8.19 77.94 11.28 75.31 Q14.38 72.69 19.00 70.94 Q23.63 69.19 29.63 69.19 Q35.56 69.19 40.16 70.94 Q44.75 72.69 47.91 75.59 Q51.06 78.50 52.69 82.25 Q54.31 86.00 54.31 90.06 Q54.31 98.06 47.88 105.06 Q45.25 107.94 41.94 110.56 Q38.63 113.19 35.72 116.06 Q32.81 118.94 30.84 122.34 Q28.88 125.75 28.88 130.13 Q28.88 131.00 28.97 132.16 Q29.06 133.31 29.25 134.56 Q28.25 134.94 27.09 135.09 Q25.94 135.25 24.88 135.25 Q23.88 131.31 23.88 127.94 Q23.88 124.69 24.69 122.06 Q25.50 119.44 26.78 117.28 Q28.06 115.13 29.66 113.28 Q31.25 111.44 32.88 109.75 Q34.81 107.63 36.50 105.63 Q38.19 103.63 39.41 101.31 Q40.63 99.00 41.34 96.22 Q42.06 93.44 42.06 89.81 Q42.06 85.56 41.06 82.59 Q40.06 79.63 38.25 77.75 Q36.44 75.88 33.91 75.03 Q31.38 74.19 28.25 74.19 Q24.50 74.19 21.19 75.38 Q17.88 76.56 15.81 79.13 ZM27.19 161.75 Q25.38 161.75 23.84 161.13 Q22.31 160.50 21.13 159.38 Q19.94 158.25 19.28 156.69 Q18.63 155.13 18.63 153.25 Q18.63 151.38 19.31 149.78 Q20.00 148.19 21.16 147.06 Q22.31 145.94 23.88 145.28 Q25.44 144.63 27.25 144.63 Q29.00 144.63 30.56 145.25 Q32.13 145.88 33.31 147.00 Q34.50 148.13 35.16 149.69 Q35.81 151.25 35.81 153.13 Q35.81 155.00 35.16 156.59 Q34.50 158.19 33.31 159.34 Q32.13 160.50 30.56 161.13 Q29.00 161.75 27.19 161.75 Z";
+	CtrlImg::Set(CtrlImg::I_question, MakeCircularIcon(Color(85, 127, 200), s_question));
+	static const char *s_exclamation = "M22.75 89.44 L20.00 89.44 Q19.56 82.31 17.13 72.19 L13.88 58.56 Q10.94 46.31 10.94 41.00 Q10.94 36.19 13.81 33.25 Q16.69 30.31 21.31 30.31 Q25.81 30.31 28.78 33.28 Q31.75 36.25 31.75 40.81 Q31.75 45.56 28.63 58.56 L25.31 72.19 Q23.56 79.44 22.75 89.44 ZM21.44 98.38 Q25.63 98.38 28.59 101.34 Q31.56 104.31 31.56 108.56 Q31.56 112.75 28.59 115.72 Q25.63 118.69 21.44 118.69 Q17.25 118.69 14.28 115.72 Q11.31 112.75 11.31 108.56 Q11.31 104.38 14.25 101.38 Q17.19 98.38 21.44 98.38 Z";
+	CtrlImg::Set(CtrlImg::I_exclamation, MakeCircularIcon(Red(), s_exclamation));
+	static const char *s_error = "M51.63 64.00 L22.00 34.38 L22.00 22.00 L34.38 22.00 L64.00 51.63 L94.00 22.00 L106.00 22.00 L106.00 34.38 L76.38 64.00 L106.00 93.63 L106.00 106.00 L94.00 106.00 L64.00 76.38 L34.38 106.00 L22.00 106.00 L22.00 94.00 Z";
+	CtrlImg::Set(CtrlImg::I_error, MakeCircularIcon(Red(), s_error, 0.5, Yellow()));
+}
+
+void  DrawClassicButton(Draw& w, const Rect& r_, Color tl1, Color br1, Color tl2, Color br2, Color face)
+{
+	Rect r = r_;
+	DrawFrame(w, r, tl1, br1);
+	r.Deflate(1);
+	DrawFrame(w, r, tl2, br2);
+	r.Deflate(1);
+	w.DrawRect(r, face);
+}
+
+Image MakeClassicButton(Color tl1, Color br1, Color tl2, Color br2, Color face)
+{
+	Rect r = Size(8, 8);
+	ImageDraw iw(r.GetSize());
+	DrawClassicButton(iw, r, tl1, br1, tl2, br2, face);
+	return WithHotSpot(iw, 2, 2);
 }
 
 void ChClassicSkin()
@@ -34,19 +99,43 @@ void ChClassicSkin()
 	GUI_GlobalStyle_Write(GUISTYLE_CLASSIC);
 	GUI_PopUpEffect_Write(Ctrl::IsCompositedGui() ? GUIEFFECT_NONE : GUIEFFECT_SLIDE);
 	
-	ColoredOverride(CtrlsImg::Iml(), ClassicCtrlsImg::Iml());
-	for(int q = 0; q < 4; q++)
-		CtrlsImg::Set(CtrlsImg::I_HTB + q, AdjustColors(CtrlsImg::Get(ClassicCtrlsImg::I_B + q)));
+	Color grayface = Blend(SColorFace(), Gray());
 
+	Image edge = IsDarkTheme() ? MakeClassicButton(grayface, White(), Gray(), LtGray(), grayface)
+	                           : MakeClassicButton(Gray(), White(), Black(), LtGray(), SColorFace());
+	CtrlsImg::Set(CtrlsImg::I_EFE, edge);
+	CtrlsImg::Set(CtrlsImg::I_VE, edge);
+
+	Color wg = Blend(SColorFace(), WhiteGray());
 	{
 		Button::Style& s = Button::StyleNormal().Write();
+		Image edge = MakeClassicButton(wg, IsDarkTheme() ? Blend(Gray(), Black()) : Black(), White(), Gray(), SColorFace());
+		s.look[CTRL_HOT] = s.look[CTRL_NORMAL] = IsDarkTheme() ? edge : MakeClassicButton(White(), Black(), wg, Gray(), SColorFace());
+		s.look[CTRL_PRESSED] = MakeClassicButton(Gray(), Gray(), Gray(), Gray(), grayface);
+		s.look[CTRL_DISABLED] = MakeClassicButton(SWhite(), Black(), wg, Gray(), SColorFace());
 		s.monocolor[0] = s.monocolor[1] = s.monocolor[2] = s.monocolor[3] = SColorText();
 		s.pressoffset.x = s.pressoffset.y = 1;
 		s.transparent = false;
+
+		Button::Style& es = Button::StyleEdge().Write();
+		es.look[CTRL_HOT] = es.look[CTRL_NORMAL] = edge;
+		es.look[CTRL_PRESSED] = s.look[CTRL_PRESSED];
+		es.look[CTRL_DISABLED] = s.look[CTRL_DISABLED];
+		
+		for(int i = 0; i < 4; i++)
+			Button::StyleOk().Write().look[i] = Button::StyleLeftEdge().Write().look[i] = Button::StyleScroll().Write().look[i] = es.look[i];
 	}
 
 	{
 		ScrollBar::Style& s = ScrollBar::StyleDefault().Write();
+		auto SbWc = [&](Value *look) {
+			Color wc = Blend(SColorFace(), Gray());
+			look[CTRL_NORMAL] = wc;
+			look[CTRL_HOT] = wc;
+			look[CTRL_PRESSED] = SColorText();
+			look[CTRL_DISABLED] = wc;
+		};
+		
 		SbWc(s.hupper);
 		SbWc(s.hlower);
 		SbWc(s.vupper);
@@ -70,8 +159,60 @@ void ChClassicSkin()
 		MenuBar::Style& s = MenuBar::StyleDefault().Write();
 		s.popupbody = SColorFace();
 	}
+	
+	int c = DPI(14);
 
-//	LabelBoxTextColor_Write(SColorText());
+	for(int i = 0; i < 4; i++) {
+		{
+			TabCtrl::Style& s = TabCtrl::StyleDefault().Write();
+			s.body = MakeClassicButton(White(), Black(), wg, Gray(), SColorFace());
+			Color f = i == CTRL_PRESSED ? SColorFace : grayface;
+			Image t = MakeClassicButton(White(), Black(), wg, Gray(), f);
+			Size isz = t.GetSize();
+			isz.cy -= 2;
+			ImageDraw iw(isz);
+			iw.DrawImage(0, 0, t);
+			if(i == CTRL_PRESSED) { // the active tab
+				iw.DrawRect(isz.cx - 1, isz.cy - 2, 2, 1, White());
+				iw.DrawRect(isz.cx - 2, isz.cy - 1, 2, 1, wg);
+			}
+			t = iw;
+			SetHotSpots(t, Point(2, 2));
+			s.first[i] = s.last[i] = s.both[i] = s.normal[i] = t;
+			s.margin = 0;
+			s.sel = Rect(0, DPI(1), 0, DPI(1));
+			s.extendleft = DPI(2);
+			s.text_color[i] = SColorText();
+		}
+		static int adj[] = { 10, 80, -5, -10 };
+		Color f = FaceColor(adj[i]);
+		{
+			for(int opt = 0; opt < 2; opt++) {
+				ImagePainter p(c, c);
+				p.Clear(RGBAZero());
+				p.Circle(DPI(7), DPI(7), DPI(6)).Fill(f).Stroke(2, Pointf(DPI(2), DPI(2)), SGray(), Pointf(DPI(14), DPI(14)), White());
+				p.Circle(DPI(7), DPI(7), DPI(6) - 1).Fill(f).Stroke(1, Pointf(DPI(2) + 1, DPI(2) + 1), SBlack(), Pointf(DPI(14) - 2, DPI(14) - 2), SColorFace());
+				if(opt)
+					p.Circle(DPI(7), DPI(7), DPI(4)).Fill(SColorText());
+				CtrlsImg::Set((opt ? CtrlsImg::I_S1 : CtrlsImg::I_S0) + i, p);
+			}
+		}
+		{
+			for(int chk = 0; chk < 3; chk++) {
+				ImagePainter p(c, c);
+				p.Clear(RGBAZero());
+				DrawClassicButton(p, Size(c, c), SGray(), White(), SBlack(), LtGray(), f);
+				p.Scale(DPI(1));
+				if(chk == 1)
+					p.Move(3, 7).Line(7, 10).Line(11, 4).Stroke(2, SColorText());
+				if(chk == 2)
+					p.Rectangle(3, 6, 8, 2).Fill(SColorText());
+				CtrlsImg::Set(decode(chk, 0, CtrlsImg::I_O0, 1, CtrlsImg::I_O1, CtrlsImg::I_O2) + i, p);
+			}
+		}
+	}
+	
+	MakeDialogIcons();
 }
 
 #ifdef PLATFORM_X11
@@ -280,12 +421,6 @@ Image WithBottomLine(const Image& m, Color c, int w)
 	return WithRect(m, 0, m.GetHeight() - w, m.GetWidth(), w, c);
 }
 
-Color AdjustColor(Color c, int adj) {
-	return Color(clamp(c.GetR() + adj, 0, 255),
-	             clamp(c.GetG() + adj, 0, 255),
-	             clamp(c.GetB() + adj, 0, 255));
-}
-
 void ChSynthetic(Image *button100x100, Color *text, bool macos)
 {
 	int roundness = DPI(3);
@@ -296,7 +431,6 @@ void ChSynthetic(Image *button100x100, Color *text, bool macos)
 		Image m = button100x100[i];
 		Image m2 = macos ? button100x100[i + 4] : m;
 		auto Espots = [=](const Image& m) { return WithHotSpots(m, DPI(3), DPI(1), CH_EDITFIELD_IMAGE, DPI(3)); };
-		auto Face = [](int adj) { return AdjustColor(SColorFace(), adj); };
 		if(i == 0) {
 			ink = GetInk(m);
 			if(macos && IsDarkTheme())
@@ -346,7 +480,7 @@ void ChSynthetic(Image *button100x100, Color *text, bool macos)
 			s.left[i] = MakeButton(roundness, m2, lw, ink, CORNER_TOP_LEFT|CORNER_BOTTOM_LEFT);
 			s.trivial[i] = s.look[i] = s.right[i] = MakeButton(roundness, m2, lw, ink, CORNER_TOP_RIGHT|CORNER_BOTTOM_RIGHT);
 			if(i == 0)
-				s.coloredge = WithHotSpots(MakeButton(roundness, Black(), macos ? lw : DPI(2), Null), DPI(3), lw, 0, 0);
+				s.coloredge = WithHotSpots(MakeButton(roundness, Black(), DPI(2), Null), DPI(3), lw, 0, 0);
 			auto Middle = [&](Image m) {
 				ImageBuffer ib(m);
 				for(int y = 0; y < lw; y++)
@@ -395,10 +529,10 @@ void ChSynthetic(Image *button100x100, Color *text, bool macos)
 			HeaderCtrl::Style& hs = HeaderCtrl::StyleDefault().Write();
 			Image h = m;
 			if(macos)
-				h = CreateImage(Size(10, 10), Face(decode(i, CTRL_NORMAL, 10,
-			                                                 CTRL_HOT, IsDarkTheme() ? 15 : 0,
-			                                                 CTRL_PRESSED, -5,
-			                                                 -8)));
+				h = CreateImage(Size(10, 10), FaceColor(decode(i, CTRL_NORMAL, 10,
+			                                                      CTRL_HOT, IsDarkTheme() ? 15 : 0,
+			                                                      CTRL_PRESSED, -5,
+			                                                      -8)));
 			hs.look[i] = ChHot(WithBottomLine(WithRightLine(h, ink, 1), ink));
 		}
 		if(i == CTRL_DISABLED) {
@@ -436,17 +570,7 @@ void ChSynthetic(Image *button100x100, Color *text, bool macos)
 			CtrlImg::Set(i == CTRL_PRESSED ? CtrlImg::I_vthumb1 : CtrlImg::I_vthumb, RotateClockwise(sm));
 		}
 		{
-			TabCtrl::Style& s = TabCtrl::StyleDefault().Write();
-			s.body = MakeButton(0, Face(8), DPI(1), ink);
-			Image t = MakeButton(roundness, Face(decode(i, CTRL_NORMAL, -20,
-			                                               CTRL_HOT, 2,
-			                                               CTRL_PRESSED, 8,
-			                                               -8)), DPI(1), ink, CORNER_TOP_LEFT|CORNER_TOP_RIGHT);
-			s.first[i] = s.last[i] = s.both[i] = s.normal[i] = ChHot(Crop(t, 0, 0, t.GetWidth(), t.GetHeight() - DPI(3)), DPI(3));
-			s.margin = 0;
-			s.sel = Rect(0, DPI(1), 0, DPI(1));
-			s.extendleft = DPI(2);
-			s.text_color[i] = SColorText();
+			SyntheticTab(i, roundness, ink);
 		}
 	}
 }
@@ -470,12 +594,7 @@ void ChStdSkin()
 
 	Color text[4];
 	Image button[4], sbutton[4];
-	auto Adjust = [](Color c, int adj) {
-		return Color(clamp(c.GetR() + adj, 0, 255),
-		             clamp(c.GetG() + adj, 0, 255),
-		             clamp(c.GetB() + adj, 0, 255));
-	};
-	
+
 	Color border = Gray();
 		
 	{
@@ -485,7 +604,7 @@ void ChStdSkin()
 			s.focusmargin = DPI(4);
 			for(int i = 0; i < 4; i++) {
 				static int adj[] = { 10, 80, -5, -10 };
-				Color f = Adjust(SColorFace(), adj[i]);
+				Color f = FaceColor(adj[i]);
 				Color ink = i == CTRL_DISABLED ? SColorDisabled() : SColorText();
 				s.look[i] = MakeButton(roundness, f, DPI(1 + pass), border);
 				text[i] = s.monocolor[i] = s.textcolor[i] = ink;
@@ -548,7 +667,7 @@ void ChStdSkin()
 			s.hupper[status] = s.hlower[status] = ChHot(RotateClockwise(vtrough));
 			s.vupper[status] = s.vlower[status] = ChHot(vtrough); // we have problems getting this right for vertical
 			static int adj[] = { 20, 40, 10, -10 };
-			s.hthumb[status] = s.vthumb[status] = Adjust(border, adj[status]);
+			s.hthumb[status] = s.vthumb[status] = AdjustColor(border, adj[status]);
 		}
 	}
 	
@@ -557,6 +676,8 @@ void ChStdSkin()
 		s.topitem[1] = Blend(SColorHighlight(), SColorPaper());
 	}
 	GUI_PopUpEffect_Write(Ctrl::IsCompositedGui() ? GUIEFFECT_NONE : GUIEFFECT_SLIDE);
+	
+	MakeDialogIcons();
 }
 
 #ifdef GUI_X11
