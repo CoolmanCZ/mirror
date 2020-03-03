@@ -193,6 +193,7 @@ struct Pdb : Debugger, ParentCtrl {
 	HWND                        hWnd;
 	VectorMap<adr_t, byte>      bp_set; // breakpoints active for single RunToException
 
+	bool                        clang; // we are in clang toolchain
 	bool                        win64; // debugee is 64-bit, always false in 32-bit exe
 
 	Context                     context;
@@ -381,10 +382,12 @@ struct Pdb : Debugger, ParentCtrl {
 	Val        Exp0(CParser& p);
 	Val        Exp(CParser& p);
 
+	bool       HasAttr(Pdb::Val record, const String& id);
 	Val        GetAttr(Pdb::Val record, int i);
 	Val        GetAttr(Pdb::Val record, const String& id);
 	int64      GetInt64Attr(Pdb::Val v, const char *a);
 	int        GetIntAttr(Pdb::Val v, const char *a)         { return (int)GetInt64Attr(v, a); }
+	byte       GetByteAttr(Pdb::Val v, const char *a)        { return (byte)GetInt64Attr(v, a); }
 	Val        At(Pdb::Val val, int i);
 	Val        At(Pdb::Val record, const char *id, int i);
 	int        IntAt(Pdb::Val record, const char *id, int i);
@@ -496,7 +499,7 @@ struct Pdb : Debugger, ParentCtrl {
 
 	void      Tab();
 
-	bool      Create(One<Host> host, const String& exefile, const String& cmdline);
+	bool      Create(One<Host> local, const String& exefile, const String& cmdline, bool clang_);
 
 	void      SerializeSession(Stream& s);
 

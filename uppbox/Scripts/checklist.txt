@@ -1,0 +1,7 @@
+- Check with mingw32/64: mysql, pgsql, SDL2 linking
+- Check dialog icons in win32 (TestChStyle)
+- Check examples/ImageView
+- Check app icon linking in Win32
+- Check OpenGl
+- Check SDLSoundDemo
+- Check PDB tests in all configs

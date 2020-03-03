@@ -43,8 +43,11 @@ void Ide::RunArgs() {
 		dlg.arg.GetSelection(l, h);
 		String s = file ? SelectFileOpen("All files\t*.*") : SelectDirectory();
 		dlg.arg.SetSelection(l, h);
-		if(s.GetCount())
+		if(s.GetCount()) {
+			if(s.Find(' ') >= 0)
+				s = '\"' + s + '\"';
 			dlg.arg.Insert(s);
+		}
 	};
 	dlg.ifile.SetImage(CtrlImg::File());
 	dlg.ifile << [&] { Ins(true); };
@@ -246,27 +249,8 @@ void Ide::BuildAndDebug0(const String& srcfile)
 		One<Host> h = CreateHostRunDir();
 		h->ChDir(GetFileFolder(target));
 		VectorMap<String, String> bm = GetMethodVars(method);
-		String dbg = bm.Get("DEBUGGER", Null);
-		if(IsNull(dbg)) {
-			if(bm.Get("BUILDER", Null) == "MSC71") {
-				String sln = ForceExt(target, ".sln");
-				if(GetFileLength(sln) > 0)
-					h->Launch("devenv \"" + h->GetHostPath(sln) + "\" "
-					// + "\"" + h->GetHostPath(srcfile) + "\"" //TRC, 2011/09/26: wrong devenv argument
-					);
-				else
-					h->Launch("devenv \"" + h->GetHostPath(target)
-					//+ "\" \"" + h->GetHostPath(srcfile) //TRC, 2011/09/26: wrong devenv argument
-					+ "\" /debugexe "
-					);
-				return;
-			}
-			dbg = "gdb";
-		}
-		else
-			h->Launch('\"' + dbg + "\" \""
-//			          + h->GetHostPath(srcfile) + ' '
-			          + h->GetHostPath(target) + "\"", true);
+		String dbg = Nvl(bm.Get("DEBUGGER", Null), "gdb");
+		h->Launch('\"' + dbg + "\" \"" + h->GetHostPath(target) + "\"", true);
 	}
 }
 
@@ -281,10 +265,9 @@ void Ide::BuildAndExtDebugFile()
 }
 
 One<Debugger> GdbCreate(One<Host>&& host, const String& exefile, const String& cmdline, bool console);
-One<Debugger> Gdb_MI2Create(One<Host>&& host, const String& exefile, const String& cmdline, bool console);
+
 #ifdef PLATFORM_WIN32
-One<Debugger> CdbCreate(One<Host>&& host, const String& exefile, const String& cmdline);
-One<Debugger> PdbCreate(One<Host>&& host, const String& exefile, const String& cmdline);
+One<Debugger> PdbCreate(One<Host>&& host, const String& exefile, const String& cmdline, bool clang);
 #endif
 
 void Ide::BuildAndDebug(bool runto)
@@ -311,13 +294,12 @@ void Ide::BuildAndDebug(bool runto)
 
 	bool console = ShouldHaveConsole();
 
-	if(findarg(builder, "GCC", "CLANG") >= 0) {
-		debugger = GdbCreate(pick(host), target, runarg, console);
-	}
 #ifdef PLATFORM_WIN32
+	if(findarg(builder, "GCC", "CLANG") < 0 || bm.Get("DEBUG_OPTIONS", String()).Find("-gcodeview") >= 0) // llvm-mingw can generate pdb symbolic info
+		debugger = PdbCreate(pick(host), target, runarg, builder == "CLANG");
 	else
-		debugger = PdbCreate(pick(host), target, runarg);
 #endif
+		debugger = GdbCreate(pick(host), target, runarg, console);
 
 	if(!debugger) {
 		IdeEndDebug();

@@ -1,13 +1,40 @@
+- Report chrono issue
+
 - MacOS crash when adding Label to TestChStyles
-- Mingw: Make things run with F5 even in release mode, "Failed to obtain" should only be shown when debugger stops and even then things should work
-- Mingw: Release mode theide crash, symptom missing doc points
-- Mingw compiled theide, TestChStyle, breakpoint 699 ChWin32.cpp - no info about local variables (also in Console, seems consistent)
+
+- add .ddls to theide
+- dbghelp.dll
+- Finish install issues
+
+- Remove theide32
+
+- clang32 debugging (epb ?)
+- clang std::string nothing visible
+
+- std::vector etc for Clang in debugger
 
 NTH:
 
-
 DONE:
 
+- tpp wider hyperlink
+- debugger tooltip should show smart
+- debugger WithDeepCopy should be ignored
+- fix clang warnings
+- reference/Watermark @N does not work
+- PaintGrid: lambda.PaintGrid(): PaintHorzSb: lambda.PaintHorzSb(): PaintRcCenterImage: void.PaintRcCenterImage(): C:\upp\uppsrc\GridCtrl\GridCtrl.usc(24,55): 'PaintRcCenterImage' is not a lambda
+- JetStory icon.rc problem
+- Dark mode svn sync
+- organizer uses: Cancel
+- Update credits
+- Run options - if path has spaces in it, " should be added
+- Dark mode ide errors - white on light red....
+- clang autosetup
+- Ide not blinking while building win32/clang build - SOMETIMES :(
+- Linked in (-30:-39.-52) (related to ^^^?)
+- clang problem with stopping the debugger via Shift+F5 (Console test, )
+- Build methods: compiler name, debugger to separated lines
+- Mingw: Make things run with F5 even in release mode, "Failed to obtain" should only be shown when debugger stops and even then things should work
 - Remove ClassicCtrls, AmbientCtrls
 - usc columnlist
 - usc color pusher
@@ -25,6 +52,15 @@ DONE:
 - Unknown layout type should have better visual
 - LayDes menu background color
 - usc treectrl
+
+CLANG done:
+- clang32
+- idmapBench still does not compile
+- remove mingw thread_local hacks
+- plugin/tif
+- ImageView
+- clang -mconsole / -mwindows
+
 
 macos done:
 
@@ -119,4 +155,10 @@ gtk3 DONE:
 - Problem with multibutton is back again
 - Redmond scrollbars width
 - Improve focus visuals
+
+REJECTED as we are going to use clang:
+
+- Mingw: Release mode theide crash, symptom missing doc points
+- Mingw compiled theide, TestChStyle, breakpoint 699 ChWin32.cpp - no info about local variables (also in Console, seems consistent)
+- runtime .dll (?) - UCRT is OK for now
 

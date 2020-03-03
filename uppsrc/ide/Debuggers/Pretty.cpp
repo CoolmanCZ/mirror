@@ -250,10 +250,17 @@ void Pdb::PrettyValue(Pdb::Val val, const Vector<String>&, int64 from, int count
 
 void Pdb::PrettyStdVector(Pdb::Val val, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p)
 {
-	Val q = GetAttr(GetAttr(val, "_Mypair"), "_Myval2");
+	Val begin, end;
+	if(HasAttr(val, "__begin_")) { // CLANG's std::vector
+		begin = DeRef(GetAttr(val, "__begin_"));
+		end = DeRef(GetAttr(val, "__end_"));
+	}
+	else {
+		Val q = GetAttr(GetAttr(val, "_Mypair"), "_Myval2");
+		begin = DeRef(GetAttr(q, "_Myfirst"));
+		end = DeRef(GetAttr(q, "_Mylast"));
+	}
 	int sz = SizeOfType(tparam[0]);
-	Val begin = DeRef(GetAttr(q, "_Myfirst"));
-	Val end = DeRef(GetAttr(q, "_Mylast"));
 	p.data_count = (end.address - begin.address) / sz;
 	for(int i = 0; i < count; i++)
 		p.data_ptr.Add(begin.address + (i + from) * sz);
@@ -261,14 +268,32 @@ void Pdb::PrettyStdVector(Pdb::Val val, const Vector<String>& tparam, int64 from
 
 void Pdb::PrettyStdString(Pdb::Val val, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p)
 {
-	Val q = GetAttr(GetAttr(val, "_Mypair"), "_Myval2");
+	adr_t a;
+	int size;
 	bool w = tparam[0] == "wchar_t";
-	int size = GetIntAttr(q, "_Mysize");
-	int res = GetIntAttr(q, "_Myres");
+	if(HasAttr(val, "__r_")) { // CLANG variant
+		Val r = GetAttr(GetAttr(val, "__r_"), "__value_");
+		Val s = GetAttr(r, "__s");
+		size = GetByteAttr(s, "__size_");
+		if(size & 1) {
+			Val l = GetAttr(r, "__l");
+			size = GetIntAttr(l, "__size_");
+			a = DeRef(GetAttr(l, "__data_")).address;
+		}
+		else {
+			size = size >> 1;
+			a = s.address + 1 + w;
+		}
+	}
+	else {
+		Val q = GetAttr(GetAttr(val, "_Mypair"), "_Myval2");
+		int size = GetIntAttr(q, "_Mysize");
+		int res = GetIntAttr(q, "_Myres");
+		a = GetAttr(GetAttr(q, "_Bx"), "_Buf").address;
+		if(res >= (w ? 8 : 16))
+			a = PeekPtr(a);
+	}
 	p.data_count = size;
-	adr_t a = GetAttr(GetAttr(q, "_Bx"), "_Buf").address;
-	if(res >= (w ? 8 : 16))
-		a = PeekPtr(a);
 	p.data_type << (w ? "short int" : "char");
 	int sz = w + 1;
 	for(int i = 0; i < count; i++)
@@ -295,7 +320,10 @@ bool Pdb::PrettyVal(Pdb::Val val, int64 from, int count, Pretty& p)
 	
 	current_modbase = t.modbase; // so that we do not need to pass it as parameter in Pretty routines
 
-	String type = t.name;
+	String type = Filter(t.name, [](int c) { return c != ' ' ? c : 0; });
+	if(type.TrimStart("Upp::WithDeepCopy<"))
+		type.TrimEnd(">");
+	type.Replace("::__1", "");
 	Vector<String> type_param;
 	int q = type.Find('<');
 	if(q >= 0) {

@@ -198,7 +198,7 @@ bool GccBuilder::BuildPackage(const String& package, Vector<String>& linkfile, V
 
 		sb << Join(cc, cpp_options) << " -x c++-header " << GetHostPathQ(pch_header) << " -o " << GetHostPathQ(pch_file);
 
-		PutConsole("PCH: " + GetFileName(pch_header));
+		PutConsole("Precompiling header: " + GetFileName(pch_header));
 		if(pch_slot < 0 || !Run(~sb, pch_slot, GetHostPath(pch_file), 1))
 			error = true;
 		Wait();
@@ -237,10 +237,14 @@ bool GccBuilder::BuildPackage(const String& package, Vector<String>& linkfile, V
 			bool execerr = false;
 			if(rc) {
 				String exec;
-				exec << GetHostPathShort(FindInDirs(host->GetExecutablesDirs(), "windres.exe")) << " -i " << GetHostPathQ(fn);
+				String windres = "windres.exe";
+				int q = compiler.ReverseFind('-'); // clang32 windres name is i686-w64-mingw32-windres.exe
+				if(q > 0)
+					windres = compiler.Mid(0, q + 1) + windres;
+				exec << GetHostPath(FindInDirs(host->GetExecutablesDirs(), windres)) << " -i " << GetHostPathQ(fn);
 				if(cc.Find(" -m32 ") >= 0)
 					exec << " --target=pe-i386 ";
-				exec << " -o " << GetHostPathQ(objfile) << IncludesShort(" --include-dir=", package, pkg)
+				exec << " -o " << GetHostPathQ(objfile) << Includes(" --include-dir=", package, pkg)
 				     << DefinesTargetTime(" -D", package, pkg) + (HasFlag("DEBUG")?" -D_DEBUG":"");
 				PutVerbose(exec);
 				int slot = AllocSlot();
@@ -481,12 +485,20 @@ bool GccBuilder::Link(const Vector<String>& linkfile, const String& linkoptions,
 				lnk << " -static";
 			if(HasFlag("WINCE"))
 				lnk << " -mwindowsce";
-			else if(HasFlag("WIN32") && !HasFlag("CLANG")) {
-				lnk << " -mwindows";
-				// if(HasFlag("MT"))
-					lnk << " -mthreads";
-				if(!HasFlag("GUI"))
-					lnk << " -mconsole";
+			else if(HasFlag("WIN32")) {
+				lnk << " -mthreads";
+				if(HasFlag("CLANG")) {
+					if(HasFlag("GUI"))
+						lnk << " -mwindows";
+					else
+						lnk << " -mconsole";
+				}
+				else {
+					lnk << " -mwindows";
+					// if(HasFlag("MT"))
+					if(!HasFlag("GUI"))
+						lnk << " -mconsole";
+				}
 			}
 			lnk << " -o " << GetHostPathQ(target);
 			if(createmap)
