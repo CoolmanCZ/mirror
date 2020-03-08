@@ -248,24 +248,6 @@ void Pdb::PrettyValue(Pdb::Val val, const Vector<String>&, int64 from, int count
 	}
 }
 
-void Pdb::PrettyStdVector(Pdb::Val val, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p)
-{
-	Val begin, end;
-	if(HasAttr(val, "__begin_")) { // CLANG's std::vector
-		begin = DeRef(GetAttr(val, "__begin_"));
-		end = DeRef(GetAttr(val, "__end_"));
-	}
-	else {
-		Val q = GetAttr(GetAttr(val, "_Mypair"), "_Myval2");
-		begin = DeRef(GetAttr(q, "_Myfirst"));
-		end = DeRef(GetAttr(q, "_Mylast"));
-	}
-	int sz = SizeOfType(tparam[0]);
-	p.data_count = (end.address - begin.address) / sz;
-	for(int i = 0; i < count; i++)
-		p.data_ptr.Add(begin.address + (i + from) * sz);
-}
-
 void Pdb::PrettyStdString(Pdb::Val val, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p)
 {
 	adr_t a;
@@ -287,7 +269,7 @@ void Pdb::PrettyStdString(Pdb::Val val, const Vector<String>& tparam, int64 from
 	}
 	else {
 		Val q = GetAttr(GetAttr(val, "_Mypair"), "_Myval2");
-		int size = GetIntAttr(q, "_Mysize");
+		size = GetIntAttr(q, "_Mysize");
 		int res = GetIntAttr(q, "_Myres");
 		a = GetAttr(GetAttr(q, "_Bx"), "_Buf").address;
 		if(res >= (w ? 8 : 16))
@@ -299,6 +281,66 @@ void Pdb::PrettyStdString(Pdb::Val val, const Vector<String>& tparam, int64 from
 	for(int i = 0; i < count; i++)
 		p.data_ptr.Add(a + sz * (from + i));
 	p.kind = TEXT;
+}
+
+void Pdb::PrettyStdVector(Pdb::Val val, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p)
+{
+	Val begin, end;
+	if(HasAttr(val, "__begin_")) { // CLANG's std::vector
+		begin = DeRef(GetAttr(val, "__begin_"));
+		end = DeRef(GetAttr(val, "__end_"));
+	}
+	else {
+		Val q = GetAttr(GetAttr(val, "_Mypair"), "_Myval2");
+		begin = DeRef(GetAttr(q, "_Myfirst"));
+		end = DeRef(GetAttr(q, "_Mylast"));
+	}
+	int sz = SizeOfType(tparam[0]);
+	p.data_count = (end.address - begin.address) / sz;
+	for(int i = 0; i < count; i++)
+		p.data_ptr.Add(begin.address + (i + from) * sz);
+}
+
+void Pdb::TraverseTree(bool set, Pdb::Val head, Val node, int64& from, int& count, Pdb::Pretty& p, int depth)
+{
+	if(depth > 40) // avoid problems if tree is damaged
+		return;
+	if(depth && node.address == head.address || count <= 0) // we are at the end
+		return;
+	TraverseTree(set, head, DeRef(GetAttr(node, "_Left")), from, count, p, depth + 1);
+	if(node.address != head.address) {
+		if(from == 0) {
+			Val v = GetAttr(node, "_Myval");
+			if(set)
+				p.data_ptr.Add(v.address);
+			else {
+				p.data_ptr.Add(GetAttr(v, "first").address);
+				p.data_ptr.Add(GetAttr(v, "second").address);
+			}
+			count--;
+		}
+		else
+			from--;
+	}
+	TraverseTree(set, head, DeRef(GetAttr(node, "_Right")), from, count, p, depth + 1);
+}
+
+void Pdb::PrettyStdTree(Pdb::Val val, bool set, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p)
+{
+	/* TODO: CLANG */
+	{
+		val = GetAttr(GetAttr(GetAttr(val, "_Mypair"), "_Myval2"), "_Myval2");
+		p.data_count = GetIntAttr(val, "_Mysize");
+		Val head = DeRef(GetAttr(val, "_Myhead")); // points to leftmost element (!)
+		Val top = DeRef(GetAttr(head, "_Left"));
+		for(int i = 0; i < 40; i++) { // find topmost node, i is depth limit
+			Val v = DeRef(GetAttr(top, "_Parent"));
+			if(v.address == head.address)
+				break;
+			top = v;
+		}
+		TraverseTree(set, head, top, from, count, p, 0);
+	}
 }
 
 Pdb::Val Pdb::MakeVal(const String& type, adr_t address)
@@ -318,14 +360,16 @@ bool Pdb::PrettyVal(Pdb::Val val, int64 from, int count, Pretty& p)
 
 	const Type& t = GetType(val.type);
 	
+	
 	current_modbase = t.modbase; // so that we do not need to pass it as parameter in Pretty routines
 
-	String type = Filter(t.name, [](int c) { return c != ' ' ? c : 0; });
-	if(type.TrimStart("Upp::WithDeepCopy<"))
+	String type = t.name;
+	if(type.TrimStart("Upp::WithDeepCopy<")) {
 		type.TrimEnd(">");
-	type.Replace("::__1", "");
-	Vector<String> type_param;
+		type = TrimRight(type);
+	}
 	int q = type.Find('<');
+	Vector<String> type_param; // need to be in 'orignal' form, otherwise GetTypeInfo fails
 	if(q >= 0) {
 		int e = type.ReverseFind('>');
 		if(e >= 0) {
@@ -372,10 +416,18 @@ bool Pdb::PrettyVal(Pdb::Val val, int64 from, int count, Pretty& p)
 		pretty.Add("Upp::VectorMap", { 2, THISFN(PrettyVectorMap) });
 		pretty.Add("Upp::ArrayMap", { 2, THISFN(PrettyArrayMap) });
 
-		pretty.Add("std::vector", { 1, THISFN(PrettyStdVector) });
 		pretty.Add("std::basic_string", { 1, THISFN(PrettyStdString) });
+		pretty.Add("std::vector", { 1, THISFN(PrettyStdVector) });
+		pretty.Add("std::map", { 2, [=](Val val, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p) { PrettyStdTree(val, false, tparam, from, count, p); }});
+		pretty.Add("std::set", { 1, [=](Val val, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p) { PrettyStdTree(val, true, tparam, from, count, p); }});
+		pretty.Add("std::multimap", { 2, [=](Val val, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p) { PrettyStdTree(val, false, tparam, from, count, p); }});
+		pretty.Add("std::multiset", { 1, [=](Val val, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p) { PrettyStdTree(val, true, tparam, from, count, p); }});
 	}
 	
+	type = Filter(type, [](int c) { return c != ' ' ? c : 0; });
+	type.Replace("::__1", ""); // CLANG has some weird stuff in names...
+	
+
 	int ii = pretty.Find(type);
 	if(ii >= 0) {
 		const auto& pr = pretty[ii];
@@ -455,6 +507,7 @@ bool Pdb::VisualisePretty(Visual& result, Pdb::Val val, dword flags)
 						if(j)
 							result.Cat(": ", SBlue);
 						item[j].address = p.data_ptr[ii++];
+						if(item[j].type >= 0)
 						Visualise(result, item[j], flags | MEMBER);
 					}
 				}

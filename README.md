@@ -34,7 +34,7 @@ U++ uses BSD license.
 ## Download
 
 Main downloads:
-* [Latest stable release](https://sourceforge.net/projects/upp/files/latest/download) - starts download with automatically detected platform
+* [Latest stable release](https://sourceforge.net/projects/upp/files/latest/download) - starts download with automatic platform detection
 
 Other downloads:
 * [Stable releases](https://sourceforge.net/projects/upp/) - all stable releases including historical ones
@@ -75,7 +75,7 @@ GUI_APP_MAIN
 
 ### Additional examples
 
-More examples you can find directly on special section of U++ framework website dedicated to [examples](https://www.ultimatepp.org/www$uppweb$examples$en-us.html). Moreover, exactly the same examples can be found in the **examples** and **references** directories located in this repository.
+See here: [examples](https://www.ultimatepp.org/www$uppweb$examples$en-us.html). Moreover, exactly the same examples can be found in the **examples** and **references** directories located in this repository.
 
 # Repository
 
