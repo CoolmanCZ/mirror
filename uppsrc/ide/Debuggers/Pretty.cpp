@@ -305,7 +305,7 @@ void Pdb::TraverseTree(bool set, Pdb::Val head, Val node, int64& from, int& coun
 {
 	if(depth > 40) // avoid problems if tree is damaged
 		return;
-	if(depth && node.address == head.address || count <= 0) // we are at the end
+	if(depth && node.address == head.address || count <= 0) // we are at the end or have read enough items
 		return;
 	TraverseTree(set, head, DeRef(GetAttr(node, "_Left")), from, count, p, depth + 1);
 	if(node.address != head.address) {
@@ -325,10 +325,54 @@ void Pdb::TraverseTree(bool set, Pdb::Val head, Val node, int64& from, int& coun
 	TraverseTree(set, head, DeRef(GetAttr(node, "_Right")), from, count, p, depth + 1);
 }
 
+void Pdb::TraverseTreeClang(bool set, int nodet, Val node, int64& from, int& count, Pdb::Pretty& p, int depth)
+{
+	if(depth > 40 || count <= 0) // avoid problems if tree is damaged
+		return;
+
+	Val left = DeRef(GetAttr(node, "__left_"));
+	if(left.address)
+		TraverseTreeClang(set, nodet, left, from, count, p, depth + 1);
+
+	node.type = nodet;
+	Val data = GetAttr(node, "__value_");
+	if(from == 0) {
+		if(set)
+			p.data_ptr.Add(data.address);
+		else {
+			Val cc = GetAttr(data, "__cc");
+			p.data_ptr.Add(GetAttr(cc, "first").address);
+			p.data_ptr.Add(GetAttr(cc, "second").address);
+		}
+		count--;
+	}
+	else
+		from--;
+
+	Val right = DeRef(GetAttr(node, "__right_"));
+	if(right.address)
+		TraverseTreeClang(set, nodet, right, from, count, p, depth + 1);
+}
+
 void Pdb::PrettyStdTree(Pdb::Val val, bool set, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p)
 {
-	/* TODO: CLANG */
-	{
+	if(HasAttr(val, "__tree_")) {
+		String nodet;
+		if(set)
+			nodet << "std::__1::__tree_node<" << tparam[0] << ",void *>";
+		else {
+			nodet = "std::__1::__tree_node<std::__1::__value_type<" << tparam[0] << "," << tparam[1];
+			if(*nodet.Last() == '>')
+				nodet << ' ';
+			nodet << ">,void *>";
+		}
+		Val tree = GetAttr(val, "__tree_");
+		Val value = GetAttr(GetAttr(tree, "__pair1_"), "__value_");
+		p.data_count = GetIntAttr(GetAttr(tree, "__pair3_"), "__value_");
+		Val node = DeRef(GetAttr(value, "__left_"));
+		TraverseTreeClang(set, GetTypeInfo(nodet).type, node, from, count, p, 0);
+	}
+	else {
 		val = GetAttr(GetAttr(GetAttr(val, "_Mypair"), "_Myval2"), "_Myval2");
 		p.data_count = GetIntAttr(val, "_Mysize");
 		Val head = DeRef(GetAttr(val, "_Myhead")); // points to leftmost element (!)
@@ -340,6 +384,97 @@ void Pdb::PrettyStdTree(Pdb::Val val, bool set, const Vector<String>& tparam, in
 			top = v;
 		}
 		TraverseTree(set, head, top, from, count, p, 0);
+	}
+}
+
+void Pdb::PrettyStdList(Pdb::Val val, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p)
+{
+	if(HasAttr(val, "__end_")) {
+		p.data_count = GetIntAttr(GetAttr(val, "__size_alloc_"), "__value_");
+		int node_type = GetTypeInfo("std::__1::__list_node<" + tparam[0] + ",void *>").type;
+		Val next = DeRef(GetAttr(GetAttr(val, "__end_"), "__next_"));
+		while(count > 0) {
+			if(from == 0) {
+				Val h = next;
+				h.type = node_type;
+				p.data_ptr.Add(GetAttr(h, "__value_").address);
+				count--;
+			}
+			else
+				from--;
+			next = DeRef(GetAttr(next, "__next_"));
+		}
+	}
+	else {
+		val = GetAttr(GetAttr(val, "_Mypair"), "_Myval2");
+		p.data_count = GetIntAttr(val, "_Mysize");
+		Val next = DeRef(GetAttr(val, "_Myhead"));
+		while(count > 0) {
+			next = DeRef(GetAttr(next, "_Next"));
+			if(from == 0) {
+				p.data_ptr.Add(GetAttr(next, "_Myval").address);
+				count--;
+			}
+			else
+				from--;
+		}
+	}
+}
+
+void Pdb::PrettyStdForwardList(Pdb::Val val, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p)
+{
+	String value, next;
+	p.data_count = 0;
+	if(HasAttr(val, "__before_begin_")) {
+		val = DeRef(GetAttr(GetAttr(GetAttr(val, "__before_begin_"), "__value_"), "__next_"));
+		value = "__value_";
+		next = "__next_";
+	}
+	else {
+		val = DeRef(GetAttr(GetAttr(GetAttr(val, "_Mypair"), "_Myval2"), "_Myhead"));
+		value = "_Myval";
+		next = "_Next";
+	}
+	while(val.address) {
+		if(from == 0) {
+			if(count) {
+				p.data_ptr.Add(GetAttr(val, value).address);
+				count--;
+			}
+		}
+		else
+			from--;
+		val = DeRef(GetAttr(val, next));
+		p.data_count++;
+		if(count == 0 && p.data_count > 10000) {
+			p.data_count = INT64_MAX;
+			break;
+		}
+	}
+}
+
+void Pdb::PrettyStdDeque(Pdb::Val val, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p)
+{
+	int sz = SizeOfType(tparam[0]);
+	int block_size, start;
+	adr_t map;
+	if(HasAttr(val, "__size_")) {
+		p.data_count = GetIntAttr(GetAttr(val, "__size_"), "__value_");
+		block_size = sz < 256 ? 4096 / sz : 16;
+		start = GetIntAttr(val, "__start_");
+		map = DeRef(GetAttr(GetAttr(val, "__map_"), "__begin_")).address;
+	}
+	else {
+		val = GetAttr(GetAttr(val, "_Mypair"), "_Myval2");
+		p.data_count = GetIntAttr(val, "_Mysize");
+		block_size = sz <= 1 ? 16 : sz <= 2 ? 8 : sz <= 4 ? 4 : sz <= 8 ? 2 : 1;
+		start = GetIntAttr(val, "_Myoff");
+		map = DeRef(GetAttr(val, "_Map")).address;
+	}
+	
+	for(int i = 0; i < count; i++) {
+		int q = i + from + start;
+		p.data_ptr.Add(PeekPtr(map + (q / block_size) * (win64 ? 8 : 4)) + q % block_size * sz);
 	}
 }
 
@@ -418,15 +553,17 @@ bool Pdb::PrettyVal(Pdb::Val val, int64 from, int count, Pretty& p)
 
 		pretty.Add("std::basic_string", { 1, THISFN(PrettyStdString) });
 		pretty.Add("std::vector", { 1, THISFN(PrettyStdVector) });
-		pretty.Add("std::map", { 2, [=](Val val, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p) { PrettyStdTree(val, false, tparam, from, count, p); }});
 		pretty.Add("std::set", { 1, [=](Val val, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p) { PrettyStdTree(val, true, tparam, from, count, p); }});
-		pretty.Add("std::multimap", { 2, [=](Val val, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p) { PrettyStdTree(val, false, tparam, from, count, p); }});
 		pretty.Add("std::multiset", { 1, [=](Val val, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p) { PrettyStdTree(val, true, tparam, from, count, p); }});
+		pretty.Add("std::map", { 2, [=](Val val, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p) { PrettyStdTree(val, false, tparam, from, count, p); }});
+		pretty.Add("std::multimap", { 2, [=](Val val, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p) { PrettyStdTree(val, false, tparam, from, count, p); }});
+		pretty.Add("std::list", { 1, THISFN(PrettyStdList) });
+		pretty.Add("std::forward_list", { 1, THISFN(PrettyStdForwardList) });
+		pretty.Add("std::deque", { 1, THISFN(PrettyStdDeque) });
 	}
 	
 	type = Filter(type, [](int c) { return c != ' ' ? c : 0; });
 	type.Replace("::__1", ""); // CLANG has some weird stuff in names...
-	
 
 	int ii = pretty.Find(type);
 	if(ii >= 0) {
@@ -446,7 +583,7 @@ bool Pdb::VisualisePretty(Visual& result, Pdb::Val val, dword flags)
 	auto ResultCount = [&](int64 count) {
 		if(!(flags & MEMBER)) {
 			result.Cat("[", SLtBlue);
-			result.Cat(AsString(count), SRed);
+			result.Cat(count == INT64_MAX ? ">10000" : AsString(count), SRed);
 			result.Cat("] ", SLtBlue);
 		}
 	};
@@ -507,8 +644,8 @@ bool Pdb::VisualisePretty(Visual& result, Pdb::Val val, dword flags)
 						if(j)
 							result.Cat(": ", SBlue);
 						item[j].address = p.data_ptr[ii++];
-						if(item[j].type >= 0)
-						Visualise(result, item[j], flags | MEMBER);
+						if(item[j].type != UNKNOWN)
+							Visualise(result, item[j], flags | MEMBER);
 					}
 				}
 			}
