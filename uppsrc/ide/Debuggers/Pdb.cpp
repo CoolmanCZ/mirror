@@ -83,7 +83,7 @@ void Pdb::DebugBar(Bar& bar)
 	bar.Add(b, AK_THISS, THISBACK1(SetTab, 2));
 	bar.Add(b, AK_WATCHES, THISBACK1(SetTab, 3));
 	bar.Add(b, AK_CLEARWATCHES, THISBACK(ClearWatches));
-	bar.Add(b, AK_ADDWATCH, THISBACK(AddWatch));
+	bar.Add(b, AK_ADDWATCH, [=] { AddWatch(); });
 	bar.Add(b, AK_CPU, THISBACK1(SetTab, 4));
 	bar.Add(b, AK_MEMORY, THISBACK1(SetTab, 5));
 	bar.MenuSeparator();
@@ -263,41 +263,44 @@ struct CpuRegisterDisplay : Display {
 };
 
 Pdb::Pdb()
-{
+:	visual_display(this) {
 	hWnd = NULL;
 	hProcess = INVALID_HANDLE_VALUE;
 	current_frame = NULL;
 
+	autos.NoHeader();
+	autos.AddColumn("", 1);
+	autos.AddColumn("", 6).SetDisplay(visual_display);
+	autos.WhenEnterRow = THISBACK1(SetTreeA, &autos);
+	autos.WhenBar = [=](Bar& bar) { DataMenu(autos, bar); };
+	autos.EvenRowColor();
+	autos.WhenLeftDouble << [=] { AddWatch(autos.GetKey()); };
+
 	locals.NoHeader();
 	locals.AddColumn("", 1);
-	locals.AddColumn("", 6).SetDisplay(Single<VisualDisplay>());
+	locals.AddColumn("", 6).SetDisplay(visual_display);
 	locals.WhenEnterRow = THISBACK1(SetTreeA, &locals);
-	locals.WhenBar = THISBACK(LocalsMenu);
+	locals.WhenBar = [=](Bar& bar) { DataMenu(locals, bar); };
 	locals.EvenRowColor();
+	locals.WhenLeftDouble << [=] { AddWatch(locals.GetKey()); };
 
 	self.NoHeader();
 	self.AddColumn("", 1);
-	self.AddColumn("", 6).SetDisplay(Single<VisualDisplay>());
+	self.AddColumn("", 6).SetDisplay(visual_display);
 	self.WhenEnterRow = THISBACK1(SetTreeA, &self);
-	self.WhenBar = THISBACK(LocalsMenu);
+	self.WhenBar = [=](Bar& bar) { DataMenu(self, bar); };
 	self.EvenRowColor();
+	self.WhenLeftDouble << [=] { AddWatch(self.GetKey()); };
 
 	watches.NoHeader();
 	watches.AddColumn("", 1).Edit(watchedit);
-	watches.AddColumn("", 6).SetDisplay(Single<VisualDisplay>());
+	watches.AddColumn("", 6).SetDisplay(visual_display);
 	watches.Moving();
 	watches.WhenEnterRow = THISBACK1(SetTreeA, &watches);
 	watches.WhenBar = THISBACK(WatchesMenu);
 	watches.WhenAcceptEdit = THISBACK(Data);
 	watches.WhenDrop = THISBACK(DropWatch);
 	watches.EvenRowColor();
-
-	autos.NoHeader();
-	autos.AddColumn("", 1);
-	autos.AddColumn("", 6).SetDisplay(Single<VisualDisplay>());
-	autos.WhenEnterRow = THISBACK1(SetTreeA, &autos);
-	autos.WhenBar = THISBACK(AutosMenu);
-	autos.EvenRowColor();
 
 	tab.Add(autos.SizePos(), "Autos");
 	tab.Add(locals.SizePos(), "Locals");
@@ -346,6 +349,7 @@ Pdb::Pdb()
 
 	tree.WhenOpen = THISBACK(TreeExpand);
 	tree.WhenBar = THISFN(TreeMenu);
+	tree.WhenLeftDouble = THISFN(TreeWatch);
 	
 	rpane.Add(disas.SizePos());
 	rpane.Add(tree.SizePos());
@@ -479,7 +483,7 @@ PDBExpressionDlg::PDBExpressionDlg(const char *title, String& brk, Pdb *pdb)
 	help.SetFrame(ViewFrame());
 	text <<= brk;
 	text <<= THISBACK(Sync);
-	value.SetDisplay(Single<Pdb::VisualDisplay>());
+	value.SetDisplay(pdb->visual_display);
 	value.Show(pdb);
 	value_lbl.Show(pdb);
 	Sync();

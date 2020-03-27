@@ -116,6 +116,7 @@ struct Pdb : Debugger, ParentCtrl {
 		Val    val;
 		Val    key;
 		int64  from = 0;
+		bool   exp = false;
 	};
 
 	struct Type : Moveable<Type> {
@@ -164,9 +165,18 @@ struct Pdb : Debugger, ParentCtrl {
 	};
 
 	struct VisualDisplay : Display {
+		Pdb *pdb;
+
 		virtual Size GetStdSize(const Value& q) const;
 		virtual void Paint(Draw& w, const Rect& r, const Value& q,
 	                       Color ink, Color paper, dword style) const;
+
+		VisualDisplay(Pdb *pdb) : pdb(pdb) {}
+	} visual_display;
+
+	struct PrettyImage {
+		Size  size;
+		adr_t pixels;
 	};
 	
 	struct Thread : Context {
@@ -264,8 +274,9 @@ struct Pdb : Debugger, ParentCtrl {
 		Vector<adr_t>  data_ptr; // pointer to items (data_count.GetCount() * data_type.GetCount() items)
 		Visual         text;
 
-		void           Text(const char *s, Color color = SRed) { text.Cat(s, color); }
-		void           SetNull()                               { Text("Null", SCyan); }
+		void           Text(const char *s, Color color = SRed)   { text.Cat(s, color); }
+		void           Text(const String& s, Color color = SRed) { text.Cat(s, color); }
+		void           SetNull()                                 { Text("Null", SCyan); }
 	};
 
 	VectorMap<String, Tuple<int, Event<Val, const Vector<String>&, int64, int, Pdb::Pretty&>>> pretty;
@@ -274,6 +285,8 @@ struct Pdb : Debugger, ParentCtrl {
 	
 	bool       show_type = false;
 	bool       raw = false;
+	
+	int        bc_lvl = 0; // For coloring { } in pretty container display
 
 	void       Error(const char *s = NULL);
 
@@ -415,6 +428,8 @@ struct Pdb : Debugger, ParentCtrl {
 	void       PrettyTime(Pdb::Val val, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p);
 	void       PrettyColor(Pdb::Val val, const Vector<String>&, int64 from, int count, Pdb::Pretty& p);
 	void       PrettyRGBA(Pdb::Val val, const Vector<String>&, int64 from, int count, Pdb::Pretty& p);
+	void       PrettyImageBuffer(Pdb::Val val, const Vector<String>&, int64 from, int count, Pdb::Pretty& p);
+	void       PrettyImg(Pdb::Val val, const Vector<String>&, int64 from, int count, Pdb::Pretty& p);
 	void       PrettyFont(Pdb::Val val, const Vector<String>&, int64 from, int count, Pdb::Pretty& p);
 	void       PrettyValueArray_(adr_t a, Pdb::Pretty& p);
 	void       PrettyValueArray(Pdb::Val val, const Vector<String>&, int64 from, int count, Pdb::Pretty& p);
@@ -427,9 +442,11 @@ struct Pdb : Debugger, ParentCtrl {
 	void       TraverseTree(bool set, Val head, Val node, int64& from, int& count, Pdb::Pretty& p, int depth);
 	void       TraverseTreeClang(bool set, int nodet, Val node, int64& from, int& count, Pdb::Pretty& p, int depth);
 	void       PrettyStdTree(Pdb::Val val, bool set, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p);
+	void       PrettyStdListM(Pdb::Val val, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p, bool map = false);
 	void       PrettyStdList(Pdb::Val val, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p);
 	void       PrettyStdForwardList(Pdb::Val val, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p);
 	void       PrettyStdDeque(Pdb::Val val, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p);
+	void       PrettyStdUnordered(Pdb::Val val, bool set, const Vector<String>& tparam, int64 from, int count, Pdb::Pretty& p);
 
 // code
 	Thread&    Current();
@@ -470,19 +487,21 @@ struct Pdb : Debugger, ParentCtrl {
 	void      ClearWatches();
 	void      DropWatch(PasteClip& clip);
 	void      AddWatch();
+	void      AddWatch(const String& s);
 	void      EditWatch();
-	void      RemoveWatch();
 
 	void      SetTab(int i);
 
 	void      SetTree(const String& exp);
 	void      SetTreeA(ArrayCtrl *data);
 	void      PrettyTreeNode(int parent, Pdb::Val val, int64 from = 0);
-	bool      TreeNode(int parent, const String& name, Val val, int64 from = 0);
+	bool      TreeNode(int parent, const String& name, Val val, int64 from = 0, Color ink = SColorText(), bool exp = false);
+	bool      TreeNodeExp(int parent, const String& name, Val val, int64 from = 0, Color ink = SColorText());
 	void      TreeExpand(int node);
 	String    GetTreeText(int id);
 	void      GetTreeText(String& r, int id, int depth);
 	void      TreeMenu(Bar& bar);
+	void      TreeWatch();
 	void      StoreTree(StringBuffer& r, int parent);
 	void      SaveTree();
 	int       FindChild(int parent, String id);
@@ -494,10 +513,10 @@ struct Pdb : Debugger, ParentCtrl {
 
 	void      MemoryGoto(const String& exp);
 	
+	void      CopyMenu(ArrayCtrl& array, Bar& bar);
 	void      MemMenu(ArrayCtrl& array, Bar& bar, const String& exp);
-	void      DataMenu(ArrayCtrl& array, Bar& bar, const String& exp);
-	void      AutosMenu(Bar& bar);
-	void      LocalsMenu(Bar& bar);
+	void      DataMenu(ArrayCtrl& array, Bar& bar);
+	void      WatchMenu(Bar& bar, const String& exp);
 	void      WatchesMenu(Bar& bar);
 	
 	void      SyncTreeDisas();

@@ -33,6 +33,8 @@ file
 	Mem.cpp,
 	Sym.cpp,
 	Exp.cpp,
+	PrettyUpp.cpp,
+	PrettyStd.cpp,
 	Pretty.cpp,
 	Visualise.cpp,
 	Data.cpp,
