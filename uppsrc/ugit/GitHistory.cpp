@@ -8,6 +8,7 @@ GitHistories::GitHistories()
 	this->WhenClose = THISBACK(Close);
 
 	commitall.Hide();
+	commitsign.Hide();
 	savediff.Hide();
 	fetch.Hide();
 	stash.Hide();

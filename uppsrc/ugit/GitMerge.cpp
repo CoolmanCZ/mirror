@@ -14,6 +14,9 @@ GitMerging::GitMerging()
 	fetch.SetImage(GitImg::GitFetch());
 	fetch.WhenPush = THISBACK(Fetch);
 
+	commitsign.Disable();
+	commitsign.Hide();
+
 	stash.Disable();
 	stash.SetImage(GitImg::GitStash());
 	stash.WhenPush = THISBACK(Stash);
@@ -151,6 +154,7 @@ void GitMerging::ToggleSet()
 			close.SetLabel("Close");
 
 		fetch.Show(!cmdshow);
+		commitsign.Show(!cmdshow);
 		stash.Show(!cmdshow);
 		stashapply.Show(!cmdshow);
 		savediff.Show(!cmdshow);
@@ -166,12 +170,14 @@ void GitMerging::ToggleSet()
 			stash.Enable(iscommit);
 			stashapply.Enable(isstash);
 			savediff.Enable(isdiff);
+			commitsign.Enable(!iscommit && allowmerge);
 			ok.Enable(!iscommit && allowmerge);
 		} else {
 			fetch.Disable();
 			stash.Disable();
 			stashapply.Disable();
 			savediff.Disable();
+			commitsign.Disable();
 			ok.Disable();
 		}
 	}

@@ -14,6 +14,9 @@ GitCommitting::GitCommitting()
 	fetch.Disable();
 	fetch.Hide();
 
+	commitsign.Disable();
+	commitsign.Hide();
+
 	stash.Disable();
 	stash.SetImage(GitImg::GitStash());
 	stash.WhenPush = THISBACK(Stash);
@@ -158,6 +161,7 @@ void GitCommitting::ToggleSet()
 		else
 			close.SetLabel("Close");
 
+		commitsign.Show(!cmdshow);
 		commitall.Show(!cmdshow);
 		stash.Show(!cmdshow);
 		stashapply.Show(!cmdshow);
@@ -172,11 +176,13 @@ void GitCommitting::ToggleSet()
 			stash.Enable(iscommit);
 			stashapply.Enable(isstash);
 			savediff.Enable(iscommit);
+			commitsign.Enable(iscommit && !unmergedfiles);
 			ok.Enable(iscommit && !unmergedfiles);
 		} else {
 			stash.Disable();
 			stashapply.Disable();
 			savediff.Disable();
+			commitsign.Disable();
 			ok.Disable();
 		}
 	}
