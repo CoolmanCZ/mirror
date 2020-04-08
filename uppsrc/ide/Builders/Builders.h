@@ -161,6 +161,12 @@ private:
 
 void DeletePCHFile(const String& pch_file);
 
+#ifdef PLATFORM_POSIX
+void   CreateBuildMethods();
+#endif
+
+String GetDefaultUppOut();
+
 INITIALIZE(GccBuilder)
 INITIALIZE(MscBuilder)
 INITIALIZE(JavaBuilder)

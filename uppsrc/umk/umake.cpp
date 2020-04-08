@@ -4,10 +4,16 @@ bool SilentMode;
 
 String GetUmkFile(const char *fn)
 {
+	String h = ConfigFile(fn);
+	if(FileExists(h))
+		return h;
+	String cfgdir = GetFileFolder(GetFileFolder(ConfigFile("x")));
+	ONCELOCK
+		PutVerbose("Config directory: " << cfgdir);
 	return GetFileOnPath(fn,
-	                     GetHomeDirFile(".upp/umk") + ';' +
-	                     GetHomeDirFile(".upp/theide") + ';' +
-	                     GetHomeDirFile(".upp/ide") + ';' +
+	                     cfgdir + "/umk" + ';' +
+	                     cfgdir + "/theide" + ';' +
+	                     cfgdir + "/ide" + ';' +
 	                     GetHomeDirectory() + ';' +
 	                     GetFileFolder(GetExeFilePath()));
 }
@@ -66,9 +72,12 @@ String GetAndroidSDKPath()
 
 CONSOLE_APP_MAIN
 {
+
 #ifdef PLATFORM_POSIX
 	setlinebuf(stdout);
+	CreateBuildMethods();
 #endif
+
 	Ide ide;
 	TheIde(&ide);
 	ide.console.SetSlots(CPU_Cores());
@@ -86,7 +95,7 @@ CONSOLE_APP_MAIN
 				}
 			}
 		String v = GetUmkFile(arg[0] + ".var");
-		if(IsNull(v) || !FileExists(v)) {
+		if(*arg[0] == '.' || IsNull(v) || !FileExists(v)) {
 		#ifdef PLATFORM_POSIX
 			Vector<String> h = Split(arg[0], IsCommaOrColon);
 		#else
@@ -97,7 +106,7 @@ CONSOLE_APP_MAIN
 			String x = Join(h, ";");
 			SetVar("UPP", x, false);
 			PutVerbose("Inline assembly: " + x);
-			String outdir = ConfigFile("_out");
+			String outdir = GetDefaultUppOut();
 			RealizeDirectory(outdir);
 			SetVar("OUTPUT", outdir, false);
 		}
@@ -148,6 +157,7 @@ CONSOLE_APP_MAIN
 		ide.release.createmap = ide.debug.createmap = false;
 		ide.targetmode = 0;
 		ide.use_target = false;
+		ide.makefile_svn_revision = false;
 		bool clean = false;
 		bool makefile = false;
 		bool deletedir = true;
@@ -217,7 +227,8 @@ CONSOLE_APP_MAIN
 			}
 			else {
 				ide.debug.target_override = ide.release.target_override = true;
-				ide.debug.target = ide.release.target = mkf = arg[i];
+				ide.debug.target = ide.release.target = NormalizePath(arg[i]);
+				PutVerbose("Target override: " << ide.debug.target);
 			}
 		if(clean)
 			ide.Clean();

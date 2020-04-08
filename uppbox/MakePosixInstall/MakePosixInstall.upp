@@ -1,0 +1,15 @@
+description "Install creator - MacOS U++ installation generator\377";
+
+uses
+	plugin\bz2,
+	Core,
+	plugin\ftp;
+
+file
+	scripts.cpp,
+	readme.cpp,
+	Main.cpp;
+
+mainconfig
+	"" = "";
+

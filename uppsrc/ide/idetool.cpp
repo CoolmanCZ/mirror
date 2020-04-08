@@ -421,14 +421,12 @@ void RepoSyncDirs(const Vector<String>& working)
 //		return;
 	Ptr<Ctrl> f = Ctrl::GetFocusCtrl();
 	RepoSync repo;
-	String msgs;
-	LoadFromGlobal(msgs, "svn-msgs");
-	repo.SetMsgs(msgs);
+	String repocfg = ConfigFile("repo.cfg");
+	repo.SetMsgs(LoadFile(repocfg));
 	for(int i = 0; i < working.GetCount(); i++)
 		repo.Dir(working[i]);
 	repo.DoSync();
-	msgs = repo.GetMsgs();
-	StoreToGlobal(msgs, "svn-msgs");
+	SaveFile(repocfg, repo.GetMsgs());
 	if(f)
 		f->SetFocus();
 }
@@ -575,18 +573,18 @@ void Ide::RemoveDs()
 
 void Ide::LaunchAndroidSDKManager(const AndroidSDK& androidSDK)
 {
-	One<Host> host = CreateHost(false, disable_uhd);
+	One<Host> host = CreateHost(darkmode, disable_uhd);
 	IGNORE_RESULT(host->Execute(androidSDK.GetLauchSDKManagerCmd()));
 }
 
 void Ide::LaunchAndroidAVDManager(const AndroidSDK& androidSDK)
 {
-	One<Host> host = CreateHost(false, disable_uhd);
+	One<Host> host = CreateHost(darkmode, disable_uhd);
 	IGNORE_RESULT(host->Execute(androidSDK.GetLauchAVDManagerCmd()));
 }
 
 void Ide::LauchAndroidDeviceMonitor(const AndroidSDK& androidSDK)
 {
-	One<Host> host = CreateHost(false, disable_uhd);
+	One<Host> host = CreateHost(darkmode, disable_uhd);
 	IGNORE_RESULT(host->Execute(androidSDK.MonitorPath()));
 }

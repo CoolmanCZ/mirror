@@ -1,103 +1,17 @@
 #include "ide.h"
 //#include "Install.h"
 
-#ifndef PLATFORM_WIN32
-
-#ifdef PLATFORM_OSX
-
-const char *clang_bm =
-R"(BUILDER = "CLANG";
-COMPILER = "clang++";
-COMMON_OPTIONS = "-mmacosx-version-min=10.13";
-COMMON_CPP_OPTIONS = "-std=c++14 -Wall -Wno-logical-op-parentheses";
-COMMON_C_OPTIONS = "";
-COMMON_LINK = "";
-COMMON_FLAGS = "";
-DEBUG_INFO = "2";
-DEBUG_BLITZ = "1";
-DEBUG_LINKMODE = "1";
-DEBUG_OPTIONS = "-O0";
-DEBUG_FLAGS = "";
-DEBUG_LINK = "";
-RELEASE_BLITZ = "0";
-RELEASE_LINKMODE = "1";
-RELEASE_OPTIONS = "-O3 -ffunction-sections -fdata-sections";
-RELEASE_FLAGS = "";
-RELEASE_LINK = "";
-DEBUGGER = "gdb";
-ALLOW_PRECOMPILED_HEADERS = "0";
-DISABLE_BLITZ = "0";
-PATH = "";
-INCLUDE = "/opt/local/include;/usr/include";
-LIB = "/opt/local/lib;/usr/lib";
-LINKMODE_LOCK = "0";)";
-
-#else
-
-const char *gcc_bm =
-R"(BUILDER = "GCC";
-COMPILER = "";
-COMMON_OPTIONS = "";
-COMMON_CPP_OPTIONS = "-std=c++14";
-COMMON_C_OPTIONS = "";
-COMMON_LINK = "";
-COMMON_FLAGS = "";
-DEBUG_INFO = "2";
-DEBUG_BLITZ = "1";
-DEBUG_LINKMODE = "1";
-DEBUG_OPTIONS = "-O0";
-DEBUG_FLAGS = "";
-DEBUG_LINK = "";
-RELEASE_BLITZ = "0";
-RELEASE_LINKMODE = "1";
-RELEASE_OPTIONS = "-O3 -ffunction-sections -fdata-sections";
-RELEASE_FLAGS = "";
-RELEASE_LINK = "-Wl,--gc-sections";
-DEBUGGER = "gdb";
-ALLOW_PRECOMPILED_HEADERS = "0";
-DISABLE_BLITZ = "0";
-PATH = "";
-INCLUDE = "";
-LIB = "";
-LINKMODE_LOCK = "0";)";
-
-const char *clang_bm =
-R"(BUILDER = "GCC";
-COMPILER = "clang++";
-COMMON_OPTIONS = "";
-COMMON_CPP_OPTIONS = "-std=c++14 -Wno-logical-op-parentheses";
-COMMON_C_OPTIONS = "";
-COMMON_LINK = "";
-COMMON_FLAGS = "";
-DEBUG_INFO = "2";
-DEBUG_BLITZ = "1";
-DEBUG_LINKMODE = "1";
-DEBUG_OPTIONS = "-O0";
-DEBUG_FLAGS = "";
-DEBUG_LINK = "";
-RELEASE_BLITZ = "0";
-RELEASE_LINKMODE = "1";
-RELEASE_OPTIONS = "-O3 -ffunction-sections -fdata-sections";
-RELEASE_FLAGS = "";
-RELEASE_LINK = "-Wl,--gc-sections";
-DEBUGGER = "gdb";
-ALLOW_PRECOMPILED_HEADERS = "0";
-DISABLE_BLITZ = "0";
-PATH = "";
-INCLUDE = "";
-LIB = "";
-LINKMODE_LOCK = "0";)";
-
-#endif
+#ifdef PLATFORM_POSIX
 
 bool Install(bool& hasvars)
 {
-	String out = GetHomeDirFile("out");
 	String ass = GetConfigFolder();
-	String myapps = GetHomeDirFile("MyApps");
-	RealizeDirectory(out);
+
+	String myapps = DirectoryExists(GetExeDirFile("uppsrc")) ? GetExeDirFile("MyApps") : GetHomeDirFile("MyApps");
 
 	String uppsrc;
+	
+	String out = GetDefaultUppOut();
 
 	auto MakeAssembly = [&](String b, String name = Null) {
 		name = Nvl(name, GetFileTitle(b));
@@ -140,6 +54,12 @@ bool Install(bool& hasvars)
 	}
 #endif
 
+	MakeAssembly(myapps);
+	uppsrc = GetHomeDirFile("bazaar") + ';' + uppsrc;
+	MakeAssembly(myapps, "MyApps-bazaar");
+
+	Scan(GetExeFolder() + "/uppsrc");
+	Scan(GetExeFolder() + "/*");
 	Scan(GetHomeDirFile("upp.src/uppsrc"));
 	Scan(GetHomeDirFile("upp.src/*"));
 	Scan(GetHomeDirFile("upp/uppsrc"));
@@ -149,25 +69,7 @@ bool Install(bool& hasvars)
 		if(ff.IsFolder())
 			Scan(ff.GetPath() + "/*");
 	
-	MakeAssembly(myapps);
-	uppsrc = GetHomeDirFile("bazaar") + ';' + uppsrc;
-	MakeAssembly(myapps, "MyApps-bazaar");
-#ifdef PLATFORM_COCOA
-	String bm = ConfigFile("CLANG.bm");
-	if(IsNull(LoadFile(bm)))
-		SaveFile(bm, clang_bm);
-#else
-	String bm = ConfigFile("GCC.bm");
-	if(IsNull(LoadFile(bm)))
-		SaveFile(bm, gcc_bm);
-
-	if(Sys("clang --version").GetCount()) {
-		String bm = ConfigFile("CLANG.bm");
-		if(IsNull(LoadFile(bm)))
-			SaveFile(bm, clang_bm);
-	}
-
-#endif
+	CreateBuildMethods();
 	return true;
 }
 
