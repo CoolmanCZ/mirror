@@ -305,7 +305,7 @@ void MakeBuild::SaveMakeFile(const String& fn, bool exporting)
 		inclist << " -I" << includes[i];
 
 	inclist << " -I./";
-	inclist << " -I" << uppout; // build_info.h is created there
+	inclist << " -I$(UPPOUT)"; // build_info.h is created there
 	
 	makefile << "\n"
 		"UPPOUT = " << (exporting ? "_out/" : GetMakePath(AdjustMakePath(host->GetHostPath(AppendFileName(uppout, ""))), win32)) << "\n"
@@ -339,14 +339,17 @@ void MakeBuild::SaveMakeFile(const String& fn, bool exporting)
 				else if(trg.Find(win32 ? '\\' : '/') < 0)
 					trg.Insert(0, "$(OutDir)");
 			}
-			output = Nvl(trg, mf.output);
-			if(exporting)
-				output = wspc[i] + ".out";
 			else
-				output = "./" + wspc[0];
+			if(exporting)
+				trg = wspc[i] + ".out";
+			else
+				trg = "./" + wspc[0];
+			output = Nvl(trg, mf.output);
+			while(DirectoryExists(output))
+				output << ".out";
 			StringStream ss;
 			String svn_info;
-			String build_info = '\"' + uppout + "/build_info.h\"";
+			String build_info = "\"$(UPPOUT)/build_info.h\"";
 			if(makefile_svn_revision) {
 				Vector<String> bi = SvnInfo(wspc[i]);
 				for(int i = 0; i < bi.GetCount(); i++)
@@ -391,8 +394,8 @@ void MakeBuild::SaveMakeFile(const String& fn, bool exporting)
 		<< rules
 		<< ".PHONY: clean\n"
 		<< "clean:\n"
-		<< "\tif [ -d \"$(UPPOUT)\" ]; then rm -rf \"$(UPPOUT)\" ; fi\n"
-		<< "\tif [ -f build_info.h ]; then rm -f build_info.h ; fi\n";
+		<< "\tif [ \"$(UPPOUT)\" != \"\" -a \"$(UPPOUT)\" != \"/\" -a -d \"$(UPPOUT)\" ] ; then rm -fr \"$(UPPOUT)\" ; fi\n"
+	;
 
 	bool sv = ::SaveFile(fn, makefile);
 	if(!exporting) {
