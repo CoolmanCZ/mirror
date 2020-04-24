@@ -27,6 +27,13 @@ struct MyApp : TopWindow {
 	virtual void LeftDown(Point p, dword keyflags) {
 		RectTracker tr(*this);
 		Size sz = GetSize();
+		if((keyflags & K_CTRL) && (keyflags & K_ALT)) {
+			tr.Dashed();
+			tr.MinSize(Size(-10000, -10000)); // allow negative size
+			rect = tr.Track(rect, ALIGN_RIGHT, ALIGN_BOTTOM);
+			rect.Normalize();
+		}
+		else
 		if(keyflags & K_ALT) {
 			tr.Dashed().Animation();
 			tr.round = THISBACK(Round);
@@ -53,6 +60,7 @@ struct MyApp : TopWindow {
 		rect = RectC(100, 100, 100, 100);
 		hline = 150;
 		vline = 150;
+		Sizeable().Zoomable();
 	}
 };
 
