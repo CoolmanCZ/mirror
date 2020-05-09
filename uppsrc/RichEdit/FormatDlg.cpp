@@ -389,7 +389,7 @@ void StyleManager::SaveStyle()
 	if(list.IsCursor()) {
 		Uuid id = list.GetKey();
 		RichStyle& s = style.Get(list.GetKey());
-		if(Ctrl::IsModified() || para.IsChanged()) {
+		if(Ctrl::IsModifiedDeep() || para.IsChanged()) {
 			dirty.FindAdd(id);
 			RichText::FormatInfo f;
 			para.Get(f);
@@ -454,7 +454,7 @@ void RichEdit::DisplayDefault::Paint(Draw& w, const Rect& r, const Value& q, Col
 	DrawSmartText(w, r.left, r.top, r.Width(), text, StdFont().Bold(), ink);
 }
 
-void StyleManager::Set(const RichText& text)
+void StyleManager::Set(const RichText& text, const Uuid& current)
 {
 	list.Clear();
 	int i;
@@ -469,6 +469,7 @@ void StyleManager::Set(const RichText& text)
 	if(q >= 0)
 		list.SetDisplay(q, 0, Single<RichEdit::DisplayDefault>());
 	ReloadNextStyles();
+	list.FindSetCursor(current);
 }
 
 void StyleManager::Set(const char *qtf)
@@ -479,7 +480,7 @@ void StyleManager::Set(const char *qtf)
 
 bool StyleManager::IsChanged() const
 {
-	return dirty.GetCount() || IsModified();
+	return dirty.GetCount() || IsModifiedDeep();
 }
 
 void StyleManager::Get(RichText& text)

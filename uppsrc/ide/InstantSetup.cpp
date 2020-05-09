@@ -155,9 +155,9 @@ void InstantSetup()
 			bmSet(bm, "DEBUG_INFO", "2");
 			bmSet(bm, "DEBUG_BLITZ", "1");
 			bmSet(bm, "DEBUG_LINKMODE", "0");
-			bmSet(bm, "DEBUG_OPTIONS", "-O0 -g -gcodeview -fno-limit-debug-info");
+			bmSet(bm, "DEBUG_OPTIONS", "");
 			bmSet(bm, "DEBUG_FLAGS", "");
-			bmSet(bm, "DEBUG_LINK", "-Wl,-pdb= -Wl,--stack,20000000");
+			bmSet(bm, "DEBUG_LINK", "-Wl,--stack,20000000");
 			bmSet(bm, "RELEASE_BLITZ", "");
 			bmSet(bm, "RELEASE_LINKMODE", "0");
 			bmSet(bm, "RELEASE_OPTIONS", "-O3 ");
@@ -264,24 +264,22 @@ void InstantSetup()
 				bins.At(0) = vc + (ver17 ? (x64 ? "/bin/hostx64/x64" : "/bin/hostx86/x86") : (x64 ? "/bin/amd64" : "/bin"));
 				bins.At(1) = bin + (x64 ? "/x64" : "/x86");
 
-				String& sslbin = bins.At(2);
-				if(IsNull(sslbin) || ToLower(sslbin).Find("openssl") >= 0)
-					sslbin = GetExeDirFile(x64 ? "bin/openssl/bin64" : "bin/openssl/bin");
+				int ii = 2;
 
-				String& sdlbin = bins.At(3);
+				String& sdlbin = bins.At(ii++);
 				if(IsNull(sdlbin) || ToLower(sdlbin).Find("sdl2") >= 0)
 					sdlbin = GetExeDirFile(x64 ? "bin/SDL2/lib/x64" : "bin/SDL2/lib/x86");
 				
-				String& pgbin = bins.At(4);
+				String& pgbin = bins.At(ii++);
 				if(IsNull(pgbin) || ToLower(pgbin).Find("pgsql") >= 0)
 					pgbin = GetExeDirFile(x64 ? "bin/pgsql/x64/bin" : "bin/pgsql/x86/bin");
 
-				String& mybin = bins.At(5);
+				String& mybin = bins.At(ii++);
 				if(IsNull(mybin) || ToLower(mybin).Find("pgsql") >= 0)
 					mybin = GetExeDirFile(x64 ? "bin/mysql/lib64" : "bin/mysql/lib32");
 				
 				incs.At(0) = vc + "/include";
-				int ii = 1;
+				ii = 1;
 				if(inc.GetCount()) {
 					incs.At(ii++) = inc + "/um";
 					incs.At(ii++) = inc + "/ucrt";
@@ -293,19 +291,19 @@ void InstantSetup()
 					incs.At(ii++) = kit81 + "/include/shared";
 				}
 	
-				String& sslinc = incs.At(4);
+				String& sslinc = incs.At(ii++);
 				if(IsNull(sslinc) || ToLower(sslinc).Find("openssl") >= 0)
 					sslinc = GetExeDirFile("bin/openssl/include");
 
-				String& sdlinc = incs.At(5);
+				String& sdlinc = incs.At(ii++);
 				if(IsNull(sdlinc) || ToLower(sdlinc).Find("sdl2") >= 0)
 					sdlinc = GetExeDirFile("bin/SDL2/include");
 
-				String& pginc = incs.At(6);
+				String& pginc = incs.At(ii++);
 				if(IsNull(pginc) || ToLower(pginc).Find("pgsql") >= 0)
 					pginc = GetExeDirFile(x64 ? "bin/pgsql/x64/include" : "bin/pgsql/x86/include");
 
-				String& myinc = incs.At(7);
+				String& myinc = incs.At(ii++);
 				if(IsNull(myinc) || ToLower(myinc).Find("mysql") >= 0)
 					myinc = GetExeDirFile(x64 ? "bin/mysql/include" : "bin/mysql/include");
 				
@@ -364,7 +362,7 @@ void InstantSetup()
 				dirty = true;
 	
 				if(!x64)
-					default_method = x86method;
+					default_method = Nvl(default_method, x86method);
 	
 				DUMP(ConfigFile(method + ".bm"));
 				DUMPC(incs);
@@ -501,27 +499,6 @@ void InstantSetup()
 		ide->CodeBaseSync();
 		ide->SetBar();
 	}
-}
-
-bool CheckLicense()
-{
-	if(!FileExists(GetExeDirFile("license.chk")))
-		return true;
-	ShowSplash();
-	Ctrl::ProcessEvents();
-	Sleep(2000);
-	HideSplash();
-	Ctrl::ProcessEvents();
-	WithLicenseLayout<TopWindow> d;
-	CtrlLayoutOKCancel(d, "License agreement");
-	d.license = GetTopic("ide/app/BSD_en-us").text;
-	d.license.Margins(4);
-	d.license.SetZoom(Zoom(Zy(18), 100));
-	d.ActiveFocus(d.license);
-	if(d.Run() != IDOK)
-		return false;
-	DeleteFile(GetExeDirFile("license.chk"));
-	return true;
 }
 
 void AutoInstantSetup()

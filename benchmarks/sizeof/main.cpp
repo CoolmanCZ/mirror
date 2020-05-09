@@ -18,6 +18,12 @@ CONSOLE_APP_MAIN
 #ifdef CPP_11
 	RLOG("CPP_11");
 #endif
+#ifdef CPU_X86
+	RLOG("CPU_X86");
+#endif
+#ifdef CPU_ARM
+	RLOG("CPU_ARM");
+#endif
 	RLOG("========================");
 	RDUMP(sizeof(bool));
 	RDUMP(sizeof(int));
@@ -66,7 +72,6 @@ CONSOLE_APP_MAIN
 	RDUMP(sizeof(Vector<int>));
 	RDUMP(sizeof(Array<int>));
 	RDUMP(sizeof(Index<int>));
-	RDUMP(sizeof(ArrayIndex<int>));
 	RDUMP(sizeof(ArrayMap<int, int>));
 	RDUMP(sizeof(VectorMap<int, int>));
 	RDUMP(sizeof(BiArray<int>));

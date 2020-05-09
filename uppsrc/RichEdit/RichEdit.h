@@ -149,7 +149,7 @@ public:
 	void  Set(int unit, const RichText::FormatInfo& formatinfo, bool baselevel = false);
 	dword Get(RichText::FormatInfo& formatinfo);
 	void  SetFont(Font fnt)                          { font = fnt; }
-	bool  IsChanged() const                          { return IsModified() || modified; }
+	bool  IsChanged() const                          { return IsModifiedDeep() || modified; }
 	void  EnableNumbering();
 	void  SetupIndent();
 	void  EditHdrFtr();
@@ -185,7 +185,7 @@ private:
 	typedef StyleManager CLASSNAME;
 
 public:
-	void     Set(const RichText& text);
+	void     Set(const RichText& text, const Uuid& current = Null);
 	void     Set(const char *qtf);
 	bool     IsChanged() const;
 	void     Get(RichText& text);

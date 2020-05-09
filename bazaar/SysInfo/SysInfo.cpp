@@ -1696,7 +1696,7 @@ bool Shutdown(String action) {
  
    	// Get the shutdown privilege for this process. 
    	AdjustTokenPrivileges(hToken, FALSE, &tkp, 0, 
-        (PTOKEN_PRIVILEGES)NULL, 0); 
+        PTOKEN_PRIVILEGES(NULL), 0); 
  
    	if (GetLastError() != ERROR_SUCCESS) 
       	return false; 
@@ -1984,7 +1984,7 @@ void SetDesktopWallPaper(const char *path)
 
 void SetDesktopWallPaper(char *path)
 {
-    if (0 == SystemParametersInfo(SPI_SETDESKWALLPAPER, 0, static_cast<LPVOID>(path), SPIF_UPDATEINIFILE || SPIF_SENDWININICHANGE))
+    if (0 == SystemParametersInfo(SPI_SETDESKWALLPAPER, 0, static_cast<LPVOID>(path), SPIF_UPDATEINIFILE|SPIF_SENDWININICHANGE))
         throw Exc(String(t_("Impossible to change Desktop bitmap")) + ": " + AsString(GetLastError()));
 }
 #endif

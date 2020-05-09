@@ -692,9 +692,9 @@ String Downloads()
 {
 	String r;
 	r << "{{1:1:1^@L "
-	     "[^app$ide$install$en-us.html^ U`+`+ for Windows (with CLANG)]:: "
-	     "[^www$uppweb$posix$en-us.html^ U`+`+ for Linux/FreeBSD]:: "
-	     "[^www$uppweb$macos$en-us.html^ U`+`+ for MacOS]";
+	     "[^app$ide$install_win32_en-us.html^ U`+`+ for Windows (with CLANG)]:: "
+	     "[^app$ide$install_posix_en-us.html^ U`+`+ for Linux/FreeBSD]:: "
+	     "[^app$ide$install_macos_en-us.html^ U`+`+ for MacOS]";
 	FindFile ff(AppendFileName(targetdir, "downloads/*.*"));
 	Vector<Time> tm;
 	Vector<String> fn;
@@ -1024,7 +1024,7 @@ CONSOLE_APP_MAIN
 		else if (tt[i].title == "Svn Upp major releases") 
 			tt[i].text.Replace(svntableStr, SvnChanges(svnlog, 100, "uppsrc", true));		
 		else
-		if(tt[i].title == "Nightly builds")
+		if(tt[i].title == "Nightly builds" || tt[i].title.Find("download") >= 0)
 			tt[i].text.Replace(String("<#downloads#>"), downloads);
 		else if (links[i].Find("index") >= 0) {
 			String win32 = "upp-win32-RELEASE.exe";

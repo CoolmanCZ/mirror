@@ -1,4 +1,4 @@
-#if defined(CPU_UNALIGNED) && defined(CPU_LE) || __ARM_ARCH_7A__
+#if defined(CPU_UNALIGNED) && defined(CPU_LE)
 NOUBSAN inline int    Peek16le(const void *ptr)  { return *(const word *)ptr; }
 NOUBSAN inline int    Peek32le(const void *ptr)  { return *(const dword *)ptr; }
 NOUBSAN inline int64  Peek64le(const void *ptr)  { return *(const int64 *)ptr; }
@@ -25,14 +25,34 @@ inline void   Poke32be(const void *ptr, int val)    { Poke16be(ptr, HIWORD(val))
 inline void   Poke64be(const void *ptr, int64 val)  { Poke32be(ptr, HIDWORD(val)); Poke32be((byte *)ptr + 4, LODWORD(val)); }
 
 #ifdef CPU_LITTLE_ENDIAN
+
 #define MAKE2B(b0, b1)                  MAKEWORD(b0, b1);
 #define MAKE4B(b0, b1, b2, b3)          MAKELONG(MAKEWORD(b0, b1), MAKEWORD(b2, b3))
+
+inline int    Peek16(const void *ptr)  { return Peek16le(ptr); }
+inline int    Peek32(const void *ptr)  { return Peek32le(ptr); }
+inline int64  Peek64(const void *ptr)  { return Peek64le(ptr); }
+
+inline void   Poke16(const void *ptr, int val)    { Poke16le(ptr, val); }
+inline void   Poke32(const void *ptr, int val)    { Poke32le(ptr, val); }
+inline void   Poke64(const void *ptr, int64 val)  { Poke64le(ptr, val); }
+
 #else
+
 #define MAKE2B(b0, b1)                  MAKEWORD(b1, b0);
 #define MAKE4B(b0, b1, b2, b3)          MAKELONG(MAKEWORD(b2, b3), MAKEWORD(b0, b1))
+
+inline int    Peek16(const void *ptr)  { return Peek16be(ptr); }
+inline int    Peek32(const void *ptr)  { return Peek32be(ptr); }
+inline int64  Peek64(const void *ptr)  { return Peek64be(ptr); }
+
+inline void   Poke16(const void *ptr, int val)    { Poke16be(ptr, val); }
+inline void   Poke32(const void *ptr, int val)    { Poke32be(ptr, val); }
+inline void   Poke64(const void *ptr, int64 val)  { Poke64be(ptr, val); }
+
 #endif
 
-#if defined(CPU_X86) && (defined(COMPILER_GCC) || defined(COMPILER_MSC))
+#if defined(CPU_X86) && defined(COMPILER_MSC)
 #ifdef COMPILER_GCC
 #ifdef CPU_64
 inline word   SwapEndian16(word v)    { __asm__("xchgb %b0,%h0" : "=Q" (v) :  "0" (v)); return v; }
@@ -104,7 +124,7 @@ inline void   EndianSwap(uint64& v)   { v = SwapEndian64(v); }
 
 #else
 
-#ifdef COMPILE_GCC
+#ifdef COMPILER_GCC
 
 inline uint64  SwapEndian64(uint64 v) { return __builtin_bswap64(v); }
 inline int64   SwapEndian64(int64 v)  { return __builtin_bswap64(v); }
@@ -119,6 +139,9 @@ inline int64  SwapEndian64(int64 v)   { EndianSwap(v); return v; }
 inline uint64 SwapEndian64(uint64 v)  { EndianSwap(v); return v; }
 #endif
 #endif
+
+inline word   SwapEndian16(int w)     { return SwapEndian16((word)w); }
+inline word   SwapEndian16(dword w)   { return SwapEndian16((word)w); }
 
 void EndianSwap(word *v, size_t count);
 void EndianSwap(int16 *v, size_t count);
@@ -314,7 +337,7 @@ int SignificantBits64(uint64 x)
 		return SignificantBits((DWORD)x);
 #endif
 #else
-	return x ? 64 - __builtin_clzl(x) : 0;
+	return x ? 64 - __builtin_clzll(x) : 0;
 #endif
 }
 
@@ -322,50 +345,3 @@ inline bool FitsInInt64(double x)
 {
 	return x >= -9223372036854775808.0 && x < 9223372036854775808.0;
 }
-
-#if defined(COMPILER_MINGW) && !defined(COMPILER_CLANG)
-
-#define MINGW_TLS_PATCH
-// This is hopefully a temporary fix for abysmal MINGW thread_local implementation
-// ALSO IMPORTANT: There are some mingw/lld issues that prevent TLS stuff to be used in inlines
-
-int FastMingwTlsAlloc();
-
-template <class T>
-struct FastMingwTls {
-	int ndx = -1;
-
-	struct TEB_ {
-	  PVOID Reserved1[12];
-	  PVOID ProcessEnvironmentBlock;
-	  PVOID Reserved2[399];
-	  BYTE  Reserved3[1952];
-	  PVOID TlsSlots[64];
-	  BYTE  Reserved4[8];
-	  PVOID Reserved5[26];
-	  PVOID ReservedForOle;
-	  PVOID Reserved6[4];
-	  PVOID TlsExpansionSlots;
-	};
-
-	force_inline
-	PVOID& Slot() const {
-	#ifdef CPU_64
-		TEB_ *teb = (TEB_ *)__readgsqword(0x30);
-	#else
-		TEB_ *teb = (TEB_ *)__readfsdword(0x18);
-	#endif
-		return teb->TlsSlots[ndx];
-	}
-
-public:
-	void operator=(T x)                { Slot() = (PVOID)(uintptr_t)x; }
-	T operator->()                     { return (T)(uintptr_t)Slot(); }
-	const T operator->() const         { return (T)(uintptr_t)Slot(); }
-	operator T() const                 { return (T)(uintptr_t)Slot(); }
-	
-	FastMingwTls()                     { ndx = FastMingwTlsAlloc(); }
-	FastMingwTls(T x) : FastMingwTls() { operator=(x); }
-};
-
-#endif

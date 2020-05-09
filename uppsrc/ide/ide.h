@@ -490,7 +490,7 @@ public:
 		String            file;
 		LineEdit::EditPos pos;
 
-		void Serialize(Stream& s)        { s % file % pos; }
+		void Serialize(Stream& s)        { s % file; s % pos; }
 	}
 	bookmark[10];
 
@@ -924,7 +924,8 @@ public:
 		void  Abbreviations();
 		void  DoMacroManager();
 		void  UpgradeTheIDE();
-
+		void  InstallDesktop();
+	
 	void      SetupMobilePlatforms(Bar& bar);
 		void  SetupAndroidMobilePlatform(Bar& bar, const AndroidSDK& androidSDK);
 		void  LaunchAndroidSDKManager(const AndroidSDK& androidSDK);

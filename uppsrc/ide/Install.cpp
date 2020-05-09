@@ -1,6 +1,27 @@
 #include "ide.h"
 //#include "Install.h"
 
+bool CheckLicense()
+{
+	if(!FileExists(GetExeDirFile("license.chk")))
+		return true;
+	ShowSplash();
+	Ctrl::ProcessEvents();
+	Sleep(2000);
+	HideSplash();
+	Ctrl::ProcessEvents();
+	WithLicenseLayout<TopWindow> d;
+	CtrlLayoutOKCancel(d, "License agreement");
+	d.license = GetTopic("ide/app/BSD_en-us").text;
+	d.license.Margins(4);
+	d.license.SetZoom(Zoom(Zy(18), 100));
+	d.ActiveFocus(d.license);
+	if(d.Run() != IDOK)
+		return false;
+	DeleteFile(GetExeDirFile("license.chk"));
+	return true;
+}
+
 #ifdef PLATFORM_POSIX
 
 bool Install(bool& hasvars)
@@ -25,7 +46,7 @@ bool Install(bool& hasvars)
 		else {
 			if(name != "uppsrc")
 				b << ';' << uppsrc;
-			if(!FileExists(a))
+			if(!FileExists(a) && name != "bazaar")
 				SaveFile(a,
 					"UPP = " + AsCString(b) + ";\r\n"
 					"OUTPUT = " + AsCString(out) + ";\r\n"
@@ -59,12 +80,10 @@ bool Install(bool& hasvars)
 	String myapps = (DirectoryExists(GetExeDirFile("uppsrc")) ? GetExeDirFile  : GetHomeDirFile)("MyApps");
 
 	for(pass = 0; pass < 2; pass++) {
-		if(pass) {
+		if(pass && bazaar.GetCount()) {
+			MakeAssembly(bazaar, "examples-bazaar");
 			MakeAssembly(myapps);
-			String h = uppsrc;
-			uppsrc = bazaar + ';' + uppsrc;
-			MakeAssembly(myapps, "MyApps-bazaar");
-			uppsrc = h;
+			MakeAssembly(myapps + ";" + bazaar, "MyApps-bazaar");
 		}
 	#ifdef PLATFORM_COCOA
 		String app = GetAppFolder();

@@ -1,0 +1,14 @@
+description "VirtualGui/SDL2GL demonstration\377";
+
+uses
+	CtrlLib,
+	RichEdit,
+	plugin/DroidFonts,
+	VirtualGui/SDL2GL;
+
+file
+	main.cpp;
+
+mainconfig
+	"" = "GUI";
+
