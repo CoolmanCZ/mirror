@@ -6,20 +6,10 @@
 #ifndef flagNOMYSQL
 
 #include <Sql/Sql.h>
-
-#ifdef PLATFORM_WIN32
-#ifndef IPPROTO_IP
-#include <winsock2.h>
-#endif
 #include <mysql.h>
-#endif
 
-#ifdef PLATFORM_POSIX
-#ifdef PLATFORM_OSX
-#include <mysql.h>
-#else
-#include <mysql/mysql.h>
-#endif
+#ifndef MYSQL_PORT // missing in mariadb client
+#define MYSQL_PORT 3306
 #endif
 
 namespace Upp {

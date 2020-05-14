@@ -7,11 +7,6 @@
 #define EIGEN_DENSEBASE_PLUGIN 	<plugin/Eigen/ToStringPlugin.h>
 #define EIGEN_TENSOR_PLUGIN		<plugin/Eigen/ToStringPlugin.h>
 
-//#ifndef flagSSE2
-// #define EIGEN_DONT_VECTORIZE
-// #define EIGEN_DISABLE_UNALIGNED_ARRAY_ASSERT
-//#endif
-
 #ifndef _DEBUG
 #define EIGEN_NO_DEBUG
 #endif
@@ -40,7 +35,7 @@ struct NonLinearOptimizationFunctor {
 	typedef Eigen::Matrix<double, ValuesAtCompileTime, 1> ValueType;
 	typedef Eigen::Matrix<double, ValuesAtCompileTime, InputsAtCompileTime> JacobianType;
 	
-	int64 unknowns, datasetLen;
+	Eigen::Index unknowns, datasetLen;
 	
 	NonLinearOptimizationFunctor() : unknowns(InputsAtCompileTime), datasetLen(ValuesAtCompileTime) {}
 	NonLinearOptimizationFunctor(int unknowns, int datasetLen) : unknowns(unknowns), datasetLen(datasetLen) {}
@@ -49,6 +44,15 @@ struct NonLinearOptimizationFunctor {
 	ptrdiff_t values() const {return ptrdiff_t(datasetLen);}
 	virtual void operator() (const InputType& , ValueType* , JacobianType*  = 0) const {};
 };
+
+struct Basic_functor : NonLinearOptimizationFunctor<double> {
+	Basic_functor(Function <int(const Eigen::VectorXd &b, Eigen::VectorXd &err)> _function) : function(_function) {}
+	int operator()(const Eigen::VectorXd &b, Eigen::VectorXd &fvec) const {return function(b, fvec);}
+	Function <int(const Eigen::VectorXd &b, Eigen::VectorXd &err)> function;
+};
+
+bool NonLinearOptimization(Eigen::VectorXd &y, int numData, Function <int(const Eigen::VectorXd &y, Eigen::VectorXd &residual)>residual);
+bool NonLinearSolver(Eigen::VectorXd &y, Function <int(const Eigen::VectorXd &b, Eigen::VectorXd &residual)> Residual);
 
 template <class T>
 void Xmlize(XmlIO &xml, Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> &mat) {

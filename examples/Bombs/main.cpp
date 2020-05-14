@@ -23,9 +23,9 @@ private:
 		BOMB = 32,
 		MARK = 64,
 		EXPLODED = 128,
-
-		UNIT = 30,
 	};
+	
+	int UNIT = 30;
 
 	void About();
 
@@ -210,6 +210,7 @@ void Bombs::Menu(Bar& menu)
 
 Bombs::Bombs()
 {
+	UNIT = DPI(30);
 	level = Size(10, 10);
 	AddFrame(menu);
 	menu.Set(THISBACK(Menu));

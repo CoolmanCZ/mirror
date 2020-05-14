@@ -2,13 +2,11 @@
 #define _ScatterCtrl_ScatterCtrl_h
 
 #include <ScatterDraw/ScatterDraw.h>
-#include <ScatterDraw/Unpedantic.h>
 #include <plugin/jpg/jpg.h>
 #include <PdfDraw/PdfDraw.h>
 #include <GridCtrl/GridCtrl.h>
 #include <plugin/Eigen/Eigen.h>
 #include <ScatterDraw/Histogram.h>
-#include <ScatterDraw/Pedantic.h>
 
 #include "PopUpText.h"
 
@@ -495,6 +493,27 @@ void ScatterCtrl::SetDrawing(T& w, const Size &sz, bool ctrl) {
 	 	}
 	} 
 }
+
+class ScatterWindow : public TopWindow {
+public:
+	typedef ScatterWindow CLASSNAME;
+	
+	ScatterWindow() {
+		Sizeable().Zoomable();
+		Add(scatter.SizePos());
+		scatter.ShowAllMenus().SetPlotAreaLeftMargin(70);
+	}
+	ScatterCtrl &operator()()		{return scatter;}
+	
+	ScatterWindow &OpenMain() {
+		scatter.ZoomToFit(true, true);
+		TopWindow::OpenMain();
+		return *this;
+	}
+
+private:	
+	ScatterCtrl scatter;	
+};
 
 }
 

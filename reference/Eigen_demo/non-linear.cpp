@@ -23,13 +23,15 @@ const double Eckerle4_functor::x[35] = {400.0, 405.0, 410.0, 415.0, 420.0, 425.0
 const double Eckerle4_functor::y[35] = {0.0001575, 0.0001699, 0.0002350, 0.0003102, 0.0004917, 0.0008710, 0.0017418, 0.0046400, 0.0065895, 0.0097302, 0.0149002, 0.0237310, 0.0401683, 0.0712559, 0.1264458, 0.2073413, 0.2902366, 0.3445623, 0.3698049, 0.3668534, 0.3106727, 0.2078154, 0.1164354, 0.0616764, 0.0337200, 0.0194023, 0.0117831, 0.0074357, 0.0022732, 0.0008800, 0.0004579, 0.0002345, 0.0001586, 0.0001143, 0.0000710 };
 
 struct Thurber_functor : NonLinearOptimizationFunctor<double> {
-	static Vector<double> _x, _y;
+	static VectorXd _x, _y;
 	
 	Thurber_functor() : NonLinearOptimizationFunctor() {
-		_x << -3.067E0 << -2.981E0 << -2.921E0 << -2.912E0 << -2.840E0 << -2.797E0 << -2.702E0 << -2.699E0 << -2.633E0 << -2.481E0 << -2.363E0 << -2.322E0 << -1.501E0 << -1.460E0 << -1.274E0 << -1.212E0 << -1.100E0 << -1.046E0 << -0.915E0 << -0.714E0 << -0.566E0 << -0.545E0 << -0.400E0 << -0.309E0 << -0.109E0 << -0.103E0 << 0.010E0 << 0.119E0 << 0.377E0 << 0.790E0 << 0.963E0 << 1.006E0 << 1.115E0 << 1.572E0 << 1.841E0 << 2.047E0 << 2.200E0;
-		_y << 80.574E0 << 84.248E0 << 87.264E0 << 87.195E0 << 89.076E0 << 89.608E0 << 89.868E0 << 90.101E0 << 92.405E0 << 95.854E0 << 100.696E0 << 101.060E0 << 401.672E0 << 390.724E0 << 567.534E0 << 635.316E0 << 733.054E0 << 759.087E0 << 894.206E0 << 990.785E0 << 1090.109E0 << 1080.914E0 << 1122.643E0 << 1178.351E0 << 1260.531E0 << 1273.514E0 << 1288.339E0 << 1327.543E0 << 1353.863E0 << 1414.509E0 << 1425.208E0 << 1421.384E0 << 1442.962E0 << 1464.350E0 << 1468.705E0 << 1447.894E0 << 1457.628E0;		
+		double x[] = {-3.067, -2.981, -2.921, -2.912, -2.840, -2.797, -2.702, -2.699, -2.633, -2.481, -2.363, -2.322, -1.501, -1.460, -1.274, -1.212, -1.100, -1.046, -0.915, -0.714, -0.566, -0.545, -0.400, -0.309, -0.109, -0.103, 0.010, 0.119, 0.377, 0.790, 0.963, 1.006, 1.115, 1.572, 1.841, 2.047, 2.200};
+		double y[] = {80.574, 84.248, 87.264, 87.195, 89.076, 89.608, 89.868, 90.101, 92.405, 95.854, 100.696, 101.060, 401.672, 390.724, 567.534, 635.316, 733.054, 759.087, 894.206, 990.785, 1090.109, 1080.914, 1122.643, 1178.351, 1260.531, 1273.514, 1288.339, 1327.543, 1353.863, 1414.509, 1425.208, 1421.384, 1442.962, 1464.350, 1468.705, 1447.894, 1457.628};		
+		_x = Map<VectorXd>(x, sizeof(x)/sizeof(double)); 
+		_y = Map<VectorXd>(y, sizeof(y)/sizeof(double)); 
 		unknowns = 7;
-		datasetLen = _x.GetCount();
+		datasetLen = _x.size();
 	}
 	
 	int operator()(const VectorXd &b, VectorXd &fvec) const {
@@ -43,7 +45,7 @@ struct Thurber_functor : NonLinearOptimizationFunctor<double> {
 	}
 };
 
-Vector<double> Thurber_functor::_x, Thurber_functor::_y;
+VectorXd Thurber_functor::_x, Thurber_functor::_y;
 
 void NonLinearOptimization() {
 	Cout() << "\n\nNon linear equations optimization using Levenberg Marquardt based on Minpack\n"
@@ -67,10 +69,36 @@ void NonLinearOptimization() {
 		else {
 			if (VerifyIsApprox(lm.fvec.squaredNorm(), 1.4635887487E-03))
 				Cout() << "\nNorm^2 is right";
+			else
+				Cout() << "\nNorm^2 is NOT right";
 			if (VerifyIsApprox(x[0], 1.5543827178) &&
 				VerifyIsApprox(x[1], 4.0888321754) &&
 				VerifyIsApprox(x[2], 4.5154121844E+02))
 				Cout() << "\nNon-linear function optimization is right!";
+			else
+				Cout() << "\nNon-linear function optimization is NOT right!";
+		}
+	}
+	{
+		Cout() << "\n\nThis is a simpler way, using NonLinearOptimization()";
+		double x[] = {400.0, 405.0, 410.0, 415.0, 420.0, 425.0, 430.0, 435.0, 436.5, 438.0, 439.5, 441.0, 442.5, 444.0, 445.5, 447.0, 448.5, 450.0, 451.5, 453.0, 454.5, 456.0, 457.5, 459.0, 460.5, 462.0, 463.5, 465.0, 470.0, 475.0, 480.0, 485.0, 490.0, 495.0, 500.0};
+		double f[] = {0.0001575, 0.0001699, 0.0002350, 0.0003102, 0.0004917, 0.0008710, 0.0017418, 0.0046400, 0.0065895, 0.0097302, 0.0149002, 0.0237310, 0.0401683, 0.0712559, 0.1264458, 0.2073413, 0.2902366, 0.3445623, 0.3698049, 0.3668534, 0.3106727, 0.2078154, 0.1164354, 0.0616764, 0.0337200, 0.0194023, 0.0117831, 0.0074357, 0.0022732, 0.0008800, 0.0004579, 0.0002345, 0.0001586, 0.0001143, 0.0000710};	
+		int num = sizeof(x)/sizeof(double);
+		VectorXd y(3);
+		y << 1., 10., 500.;
+		if(!NonLinearOptimization(y, num, [&](const VectorXd &y, VectorXd &residual)->int {
+			for(int i = 0; i < num; i++)
+				residual[i] = y[0]/y[1] * exp(-0.5*(x[i]-y[2])*(x[i]-y[2])/(y[1]*y[1])) - f[i];
+			return 0;	
+		}))
+			Cout() << "\nNo convergence!";
+		else {
+			if (VerifyIsApprox(y[0], 1.5543827178) &&
+				VerifyIsApprox(y[1], 4.0888321754) &&
+				VerifyIsApprox(y[2], 4.5154121844E+02))
+				Cout() << "\nNon-linear function optimization is right!";
+			else
+				Cout() << "\nNon-linear function optimization is NOT right!";
 		}
 	}
 	{
@@ -91,6 +119,8 @@ void NonLinearOptimization() {
 		else {
 			if (VerifyIsApprox(lm.fvec.squaredNorm(), 5.6427082397E+03))
 				Cout() << "\nNorm^2 is right";
+			else
+				Cout() << "\nNorm^2 is NOT right";
 			if (VerifyIsApprox(x[0], 1.2881396800E+03) &&
 			    VerifyIsApprox(x[1], 1.4910792535E+03) &&
 			    VerifyIsApprox(x[2], 5.8323836877E+02) &&
@@ -99,6 +129,8 @@ void NonLinearOptimization() {
 			    VerifyIsApprox(x[5], 3.9797285797E-01) &&
 			    VerifyIsApprox(x[6], 4.9727297349E-02))
 				Cout() << "\nNon-linear function optimization is right!";
+			else
+				Cout() << "\nNon-linear function optimization FAILED!";
 		}
 	}
 }
@@ -143,10 +175,10 @@ void NonLinearSolving() {
 	    ret == HybridNonLinearSolverSpace::NotMakingProgressIterations)
 		Cout() << "\nNo convergence!: " << ret;
 	else {
-		if (solver.nfev != 14)
-			Cout() << "\nError with nfev!";
 		if (VerifyIsApprox(solver.fvec.blueNorm(), 1.192636e-08))
 			Cout() << "\nNorm is right";
+		else
+			Cout() << "\nNorm is NOT right";
 		if (VerifyIsApprox(x[0], -0.5706545) && 
 		    VerifyIsApprox(x[1], -0.6816283) &&     
 		    VerifyIsApprox(x[2], -0.7017325) && 
@@ -157,7 +189,44 @@ void NonLinearSolving() {
 		    VerifyIsApprox(x[7], -0.5960342) &&  
 		    VerifyIsApprox(x[8], -0.4164121))
 			Cout() << "\nEquation solving is right!";
+		else
+			Cout() << "\nEquation solving FAILED!";
 	}
+	
+	Cout() << "\n\nThis is a simpler way, using NonLinearSolver()";
+	
+	x.setConstant(n, -1.);		// Initial values
+	
+	if (!NonLinearSolver(x, [&](const VectorXd &x, VectorXd &residual)->int {
+		const ptrdiff_t n = x.size();
+		
+		ASSERT(residual.size() == n);
+		for (ptrdiff_t k = 0; k < n; k++) {
+			double temp1 = 0.;
+			if (k) 
+				temp1 = x[k-1];
+			double temp2 = 0.;
+			if (k != n-1) 
+				temp2 = x[k+1];
+			residual[k] = (3. - 2.*x[k])*x[k] - temp1 - 2.*temp2 + 1.;
+		}
+		return 0;
+	}))
+		Cout() << "\nNo convergence!: ";
+	else {
+		if (VerifyIsApprox(x[0], -0.5706545) && 
+		    VerifyIsApprox(x[1], -0.6816283) &&     
+		    VerifyIsApprox(x[2], -0.7017325) && 
+		    VerifyIsApprox(x[3], -0.7042129) &&  
+		    VerifyIsApprox(x[4], -0.701369) && 
+		    VerifyIsApprox(x[5], -0.6918656) && 
+		    VerifyIsApprox(x[6], -0.665792) && 
+		    VerifyIsApprox(x[7], -0.5960342) &&  
+		    VerifyIsApprox(x[8], -0.4164121))
+			Cout() << "\nEquation solving is right!";
+		else
+			Cout() << "\nEquation solving FAILED!";
+	}	
 }
 
 void NonLinearTests() {

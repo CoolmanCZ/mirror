@@ -67,10 +67,14 @@ Index<String> MakeBuild::PackageConfig(const Workspace& wspc, int package,
 					cfg.FindAdd(h[i]);
 		}
 	}
-	if(target)
-		*target = Gather(pkg.target, cfg.GetKeys(), true);
+	for(int i = 0; i < wspc.GetCount(); i++) {
+		const Package& pk = wspc.package[i];
+		for(int j = 0; j < pk.GetCount(); j++)
+			if(pk[j] == "main.conf")
+				cfg.FindAdd(Filter(wspc.package.GetKey(i), [](int c) { return iscid(c) ? c : '_'; }) + "_conf");
+	}
 	Index<String> h;
-	h <<= cfg; // Retain deep copy (h will be picked)
+	h = clone(cfg); // Retain deep copy (h will be picked)
 	return h;
 }
 
