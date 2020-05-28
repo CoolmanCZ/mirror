@@ -31,6 +31,8 @@ file
 	Defs.h,
 	Ops.h,
 	Cpu.cpp,
+	Mem.h,
+	Mem.cpp,
 	Atomic.h,
 	Mt.h,
 	Mt.cpp,

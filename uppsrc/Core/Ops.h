@@ -150,83 +150,6 @@ void EndianSwap(int *v, size_t count);
 void EndianSwap(int64 *v, size_t count);
 void EndianSwap(uint64 *v, size_t count);
 
-#define SVO_MEMCPY(tgt, src, len) \
-do {  \
-	const char *s__ = (const char *)(src); \
-	char *t__ = (char *)(tgt); \
-	switch(len) { \
-	case 11: t__[10] = s__[10]; \
-	case 10: t__[9] = s__[9]; \
-	case  9: t__[8] = s__[8]; \
-	case  8: t__[7] = s__[7]; \
-	case  7: t__[6] = s__[6]; \
-	case  6: t__[5] = s__[5]; \
-	case  5: t__[4] = s__[4]; \
-	case  4: t__[3] = s__[3]; \
-	case  3: t__[2] = s__[2]; \
-	case  2: t__[1] = s__[1]; \
-	case  1: t__[0] = s__[0]; \
-	case  0: \
-		break; \
-	default: \
-		memcpy(t__, s__, len); \
-	} \
-} while(false)
-
-#define SVO_MEMSET(tgt, val, len) \
-do { \
-	char *t__ = (char *)(tgt); \
-	switch(len) { \
-	case 11: t__[10] = val; \
-	case 10: t__[9] = val; \
-	case  9: t__[8] = val; \
-	case  8: t__[7] = val; \
-	case  7: t__[6] = val; \
-	case  6: t__[5] = val; \
-	case  5: t__[4] = val; \
-	case  4: t__[3] = val; \
-	case  3: t__[2] = val; \
-	case  2: t__[1] = val; \
-	case  1: t__[0] = val; \
-	case  0: \
-		break; \
-	default: \
-		memset(t__, val, len); \
-	} \
-} while(false)
-
-template <class tchar>
-force_inline bool svo_memeq(const tchar *a, const tchar *b, int len)
-{
-	if(len > 11)
-		return memcmp(a, b, len * sizeof(tchar)) == 0;
-	switch(len) {
-	case 11:
-		if(a[10] != b[10]) return false;
-	case 10:
-		if(a[9] != b[9]) return false;
-	case 9:
-		if(a[8] != b[8]) return false;
-	case 8:
-		if(a[7] != b[7]) return false;
-	case 7:
-		if(a[6] != b[6]) return false;
-	case 6:
-		if(a[5] != b[5]) return false;
-	case 5:
-		if(a[4] != b[4]) return false;
-	case 4:
-		if(a[3] != b[3]) return false;
-	case 3:
-		if(a[2] != b[2]) return false;
-	case 2:
-		if(a[1] != b[1]) return false;
-	case 1:
-		if(a[0] != b[0]) return false;
-	}
-	return true;
-}
-
 force_inline bool fast_equal128(const void *a, const void *b)
 {
 	uint32 *aa = (uint32 *)a;
@@ -250,11 +173,7 @@ force_inline void fast_copy128(void *t, const void *s)
 	tt[3] = ss[3];
 }
 
-#if defined(CPU_UNALIGNED) && defined(CPU_LE) && (defined(COMPILER_MSC) || defined(COMPILER_GCC))
-#define FAST_STRING_COMPARE
-#endif
-
-#ifdef FAST_STRING_COMPARE
+#if defined(CPU_UNALIGNED) && defined(CPU_LE)
 force_inline
 int fast_memcmp(const char *a, const char *b, size_t len)
 {

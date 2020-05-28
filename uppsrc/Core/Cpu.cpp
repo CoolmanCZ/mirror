@@ -1,19 +1,22 @@
 #include "Core.h"
 
-namespace Upp {
-
 #ifdef CPU_X86
-
 #ifdef COMPILER_MSC
 #include <intrin.h> 
 #else
 #include <cpuid.h>
 #endif
+#endif
+
+namespace Upp {
+
+#ifdef CPU_X86
 
 static bool sHasMMX;
 static bool sHasSSE;
 static bool sHasSSE2;
 static bool sHasSSE3;
+static bool sHasAVX;
 static bool sHypervisor;
 
 static void sCheckCPU()
@@ -38,6 +41,7 @@ static void sCheckCPU()
 		sHasSSE = edx & (1 << 25);
 		sHasSSE2 = edx & (1 << 26);
 		sHasSSE3 = ecx & 1;
+		sHasAVX = ecx & (1 << 28);
 		sHypervisor = ecx & (1 << 31);
 	}
 }
@@ -50,6 +54,7 @@ bool CpuMMX()        { sCheckCPU(); return sHasMMX; }
 bool CpuSSE()        { sCheckCPU(); return sHasSSE; }
 bool CpuSSE2()       { sCheckCPU(); return sHasSSE2; }
 bool CpuSSE3()       { sCheckCPU(); return sHasSSE3; }
+bool CpuAVX()        { sCheckCPU(); return sHasAVX; }
 bool CpuHypervisor() { sCheckCPU(); return sHypervisor; }
 
 #ifdef PLATFORM_POSIX
@@ -140,28 +145,6 @@ bool IsDecentMachine()
 }
 #endif
 
-#ifndef CPU_X86
-int64 PeekI64(const void *ptr) {
-	const byte *p = (const byte *)ptr;
-	dword a = p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24);
-	dword b = p[4] | (p[5] << 8) | (p[6] << 16) | (p[7] << 24);
-	return (int64)a | ((int64)b << 32);
-}
-#endif
-
-#ifndef CPU_X86
-void PokeI64(void *ptr, int64 value) {
-	byte *p = (byte *)ptr;
-	p[0] = (byte)(value >> 8 * 0);
-	p[1] = (byte)(value >> 8 * 1);
-	p[2] = (byte)(value >> 8 * 2);
-	p[3] = (byte)(value >> 8 * 3);
-	p[4] = (byte)(value >> 8 * 4);
-	p[5] = (byte)(value >> 8 * 5);
-	p[6] = (byte)(value >> 8 * 6);
-	p[7] = (byte)(value >> 8 * 7);
-}
-#endif
 #define ENDIAN_SWAP { while(count--) { EndianSwap(*v++); } }
 
 void EndianSwap(word *v, size_t count) ENDIAN_SWAP
