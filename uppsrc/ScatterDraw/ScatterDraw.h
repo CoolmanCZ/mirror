@@ -141,7 +141,6 @@ protected:
 				("markWidth", markWidth)
 				("markColor", markColor)
 				("markBorderWidth", markBorderWidth)
-				("markWidth", markWidth)
 				("markBorderColor", markBorderColor)
 				("fillColor", fillColor)
 				("markBorderColor", markBorderColor)
@@ -190,7 +189,6 @@ protected:
 				% markWidth
 				% markColor
 				% markBorderWidth
-				% markWidth
 				% markBorderColor
 				% fillColor
 				% markBorderColor
@@ -229,10 +227,12 @@ protected:
 			pD = pointsData; 
 			owns = ownsData;
 		}
-		void SetDataSource_Internal(bool copy = true) {
+		void SetDataSourceInternal() {
+			CopyInternal();
+			DeletePD();
 			pD = &dataS;
-			if (copy) 
-				CopyInternal();
+			serializeData = true;
+			owns = false;
 		}
 		DataSource &Data()		 				{return *(~pD);}
 		const DataSource &Data() const	 		{return *(~pD);}
@@ -325,6 +325,9 @@ public:
 	Callback1<Painter&> WhenPainter;
 	Callback1<Draw&> WhenDraw;
 	Callback WhenZoomToFit;
+	
+	Function <bool(int)> WhenRemoveSeries;
+	Function <bool(int, int)> WhenSwapSeries;
 	
 	ScatterDraw& SetSize(const Size &sz) {
 		size = sz; 
@@ -707,8 +710,11 @@ public:
 	void SetDataPrimaryY(int index, bool primary = true);
 	ScatterDraw &SetDataPrimaryY(bool primary = true); 	
 	void SetDataSecondaryY(int index, bool secondary = true);
-	ScatterDraw &SetDataSecondaryY(bool secondary = true); 	
+	ScatterDraw &SetDataSecondaryY(bool secondary = true);
+	void SetRightY(int index)		{SetDataSecondaryY(index);} 	
+	ScatterDraw &SetRightY()		{return SetDataSecondaryY();}
 	bool IsDataPrimaryY(int index);	
+	bool ThereAreSecondaryY();
 	
 	void SetSequentialX(int index, bool sequential);
 	ScatterDraw &SetSequentialX(bool sequential = true);
@@ -720,8 +726,10 @@ public:
 	bool IsVisible(int index);
 	ScatterDraw &ShowAll(bool show = true);
 
-	void RemoveSeries(int index);
+	bool RemoveSeries(int index);
 	void RemoveAllSeries();
+	
+	bool SwapSeries(int i1, int i2);
 	
 	ScatterDraw& Id(int id);
 	ScatterDraw& Id(int index, int id);
@@ -847,12 +855,12 @@ public:
 		return *this;
 	}
 	
-	ScatterDraw& SetDataSource_Internal(bool copy = true) {
+	ScatterDraw& SetDataSourceInternal() {
 		for (int i = 0; i < series.GetCount(); ++i) {
 			ScatterSeries &serie = series[i]; 
 			if (serie.IsDeleted())
 				continue;
-			serie.SetDataSource_Internal(copy);
+			serie.SetDataSourceInternal();
 		}
 		return *this;
 	}
@@ -1072,9 +1080,6 @@ public:
 		} else
 			s % series;
 	}
-	
-	void SwapOrder(int i1, int i2)			{series.Swap(i1, i2);}
-	void Remove(int id)						{series.Remove(id);}
 	
 	String VariableFormatX(double d) const  {return VariableFormat(xRange, d);}
 	String VariableFormatY(double d) const  {return VariableFormat(yRange, d);} 

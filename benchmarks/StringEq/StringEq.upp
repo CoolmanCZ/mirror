@@ -1,10 +1,9 @@
-description "#WAIT: 20\377";
-
 uses
 	Core;
 
 file
-	Mem.cpp;
+	StringEq.cpp,
+	info.txt;
 
 mainconfig
 	"" = "";

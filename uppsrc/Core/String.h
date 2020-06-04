@@ -76,7 +76,7 @@ public:
 	int    Compare(const tchar *s) const;
 
 	bool   IsEqual(const String& s) const                     { return B::IsEqual(s); }
-	bool   IsEqual(const tchar *s) const                      { return Compare(s) == 0; }
+	bool   IsEqual(const tchar *s) const                      { return B::IsEqual(s); }
 
 	String Mid(int pos, int length) const;
 	String Mid(int pos) const                                 { return Mid(pos, GetLength() - pos); }
@@ -150,10 +150,10 @@ public:
 
 	friend bool operator==(const String& a, const String& b)   { return a.IsEqual(b); }
 	friend bool operator!=(const String& a, const String& b)   { return !a.IsEqual(b); }
-	friend bool operator==(const String& a, const tchar *b)    { return a.Compare(b) == 0; }
-	friend bool operator==(const tchar *a, const String& b)    { return b.Compare(a) == 0; }
-	friend bool operator!=(const String& a, const tchar *b)    { return a.Compare(b) != 0; }
-	friend bool operator!=(const tchar *a, const String& b)    { return b.Compare(a) != 0; }
+	friend bool operator==(const String& a, const tchar *b)    { return a.IsEqual(b); }
+	friend bool operator==(const tchar *a, const String& b)    { return b.IsEqual(a); }
+	friend bool operator!=(const String& a, const tchar *b)    { return !a.IsEqual(b); }
+	friend bool operator!=(const tchar *a, const String& b)    { return !b.IsEqual(a); }
 
 	friend String operator+(const String& a, const String& b)  { String c(a); c += b; return c; }
 	friend String operator+(const String& a, const tchar *b)   { String c(a); c += b; return c; }
@@ -211,12 +211,11 @@ class String0 : Moveable<String0> {
 	bool   IsSharedRef() const   { return IsRef() && IsShared(); }
 	int    LAlloc() const        { int b = (byte)chr[KIND]; return b == 255 ? Ref()->alloc : b; }
 	dword  LEqual(const String0& s) const;
-	int    LCompare(const String0& s) const;
 
 	void LSet(const String0& s);
 	void LFree();
 	void LCat(int c);
-	unsigned LHashValue() const;
+	hash_t LHashValue() const;
 
 	void UnShare();
 	void SetSLen(int l);
@@ -243,10 +242,8 @@ class String0 : Moveable<String0> {
 	friend class TextCtrl;
 
 protected:
-//	void Zero()                     { q[0] = q[1] = 0; Dsyn(); }
-//	void SetSmall(const String0& s) { q[0] = s.q[0]; q[1] = s.q[1]; }
-	void Zero()                     { fast_zero128(q); Dsyn(); }
-	void SetSmall(const String0& s) { fast_copy128(q, s.q); }
+	void Zero()                     { q[0] = q[1] = 0; Dsyn(); }
+	void SetSmall(const String0& s) { q[0] = s.q[0]; q[1] = s.q[1]; }
 	void Free()                     { if(IsLarge()) LFree(); }
 	void Pick0(String0&& s) {
 		SetSmall(s);
@@ -277,25 +274,24 @@ protected:
 	typedef StringBuffer Buffer;
 	typedef Upp::String  String;
 
+
 public:
+	bool LEq(const String0& s) const;
 	bool IsEqual(const String0& s) const {
-#if 0
-		return (chr[KIND] | s.chr[KIND] ? LEqual(s) : fast_equal128(q, s.q)) == 0;
-#else
-		return (chr[KIND] | s.chr[KIND] ? LEqual(s) :
-		#ifdef CPU_64
-		        ((q[0] ^ s.q[0]) | (q[1] ^ s.q[1]))
-		#else
-		        ((w[0] ^ s.w[0]) | (w[1] ^ s.w[1]) | (w[2] ^ s.w[2]) | (w[3] ^ s.w[3]))
-		#endif
-		       ) == 0;
-#endif
+		uint64 q1 = q[1];
+		uint64 sq1 = s.q[1];
+		return q1 == sq1 && q[0] == s.q[0] || ((q1 | sq1) & I64(0x00ff000000000000)) && LEq(s);
 	}
+	bool IsEqual(const char *s) const;
 
 	int    Compare(const String0& s) const;
 
-	unsigned GetHashValue() const {
-		return chr[KIND] ? LHashValue() : (unsigned)CombineHash(w[0], w[1], w[2], w[3]);
+	hash_t GetHashValue() const {
+#ifdef HASH64
+		return chr[KIND] ? LHashValue() : (hash_t)CombineHash(q[0], q[1]);
+#else
+		return chr[KIND] ? LHashValue() : (hash_t)CombineHash(w[0], w[1], w[2], w[3]);
+#endif
 	}
 
 	void Cat(int c) {
@@ -607,7 +603,7 @@ template<>
 inline String AsString(const String& s)     { return s; }
 
 template<>
-inline unsigned GetHashValue(const String& s) { return s.GetHashValue(); }
+inline hash_t GetHashValue(const String& s) { return s.GetHashValue(); }
 
 int CompareNoCase(const String& a, const String& b, byte encoding = 0);
 int CompareNoCase(const String& a, const char *b, byte encoding = 0);
@@ -764,8 +760,9 @@ public:
 	int  GetLength() const               { return length; }
 	int  GetAlloc() const                { return alloc; }
 
-	unsigned GetHashValue() const             { return memhash(ptr, length * sizeof(wchar)); }
-	bool     IsEqual(const WString0& s) const { return s.length == length && memcmp(ptr, s.ptr, length * sizeof(wchar)) == 0; }
+	hash_t   GetHashValue() const             { return memhash(ptr, length * sizeof(wchar)); }
+	bool     IsEqual(const WString0& s) const { return s.length == length && memeq16(ptr, s.ptr, length); }
+	bool     IsEqual(const wchar *s) const    { int l = wstrlen(s); return l == GetCount() && memeq16(begin(), s, l); }
 	int      Compare(const WString0& s) const;
 
 	void Remove(int pos, int count = 1);
@@ -907,7 +904,7 @@ inline bool  IsNull(const WString& s)       { return s.IsEmpty(); }
 //inline String AsString(const WString& s)     { return s; }
 
 template<>
-inline unsigned GetHashValue(const WString& s) { return memhash(~s, 2 * s.GetLength()); }
+inline hash_t GetHashValue(const WString& s) { return memhash(~s, 2 * s.GetLength()); }
 
 WString TrimLeft(const WString& str);
 WString TrimRight(const WString& s);

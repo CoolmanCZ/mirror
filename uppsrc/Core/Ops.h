@@ -150,86 +150,35 @@ void EndianSwap(int *v, size_t count);
 void EndianSwap(int64 *v, size_t count);
 void EndianSwap(uint64 *v, size_t count);
 
-force_inline bool fast_equal128(const void *a, const void *b)
-{
-	uint32 *aa = (uint32 *)a;
-	uint32 *bb = (uint32 *)b;
-	return ((aa[0] ^ bb[0]) | (aa[1] ^ bb[1]) | (aa[2] ^ bb[2]) | (aa[3] ^ bb[3])) == 0;
-}
-
-force_inline void fast_zero128(void *t)
-{
-	uint32 *tt = (uint32 *)t;
-	tt[0] = tt[1] = tt[2] = tt[3] = 0;
-}
-
-force_inline void fast_copy128(void *t, const void *s)
-{
-	uint32 *tt = (uint32 *)t;
-	uint32 *ss = (uint32 *)s;
-	tt[0] = ss[0];
-	tt[1] = ss[1];
-	tt[2] = ss[2];
-	tt[3] = ss[3];
-}
-
-#if defined(CPU_UNALIGNED) && defined(CPU_LE)
-force_inline
-int fast_memcmp(const char *a, const char *b, size_t len)
-{
 #ifdef CPU_64
-	while(len >= 8) {
-		uint64 a64 = *(uint64 *)a;
-		uint64 b64 = *(uint64 *)b;
-		if(a64 != b64)
-			return SwapEndian64(a64) < SwapEndian64(b64) ? -1 : 1;
-		a += 8;
-		b += 8;
-		len -= 8;
-	}
-	if(len & 4) {
-		uint32 a32 = *(uint32 *)a;
-		uint32 b32 = *(uint32 *)b;
-		if(a32 != b32)
-			return SwapEndian32(a32) < SwapEndian32(b32) ? -1 : 1;
-		a += 4;
-		b += 4;
-	}
-#else
-	while(len >= 4) {
-		uint32 a32 = *(uint32 *)a;
-		uint32 b32 = *(uint32 *)b;
-		if(a32 != b32)
-			return SwapEndian32(a32) < SwapEndian32(b32) ? -1 : 1;
-		a += 4;
-		b += 4;
-		len -= 4;
-	}
-#endif
-	if(len & 2) {
-		uint16 a16 = *(uint16 *)a;
-		uint16 b16 = *(uint16 *)b;
-		if(a16 != b16)
-			return SwapEndian16(a16) < SwapEndian16(b16) ? -1 : 1;
-		a += 2;
-		b += 2;
-	}
-	if((len & 1) != 0 && *a != *b)
-		return (byte)*a < (byte)*b ? -1 : 1;
-	return 0;
-}
-#else
-inline
-int fast_memcmp(const char *a, const char *b, size_t len)
+
+#define HASH64
+
+#define HASH_CONST1 I64(0xf7c21089bee7c0a5)
+#define HASH_CONST2 I64(0xc85abc8da7534a4d)
+#define HASH_CONST3 I64(0x8642b0fe3e86671b)
+
+typedef qword hash_t;
+
+inline dword FoldHash(qword h)
 {
-	return memcmp(a, b, len);
+	return (dword)SwapEndian64(HASH_CONST3 * h);
 }
-#endif
+
+#else
+
+#define HASH_CONST1 0xbee7c0a5
+#define HASH_CONST2 0xa7534a4d
+#define HASH_CONST3 0x8e86671b
+
+typedef dword hash_t;
 
 inline dword FoldHash(dword h)
 {
-	return SwapEndian32(0xa3613c16 * h);
+	return SwapEndian32(HASH_CONST3 * h);
 }
+
+#endif
 
 force_inline
 int SignificantBits(dword x)

@@ -1104,7 +1104,19 @@ bool ScatterDraw::IsDataPrimaryY(int index) {
 	
 	return series[index].primaryY;	
 }
+/*
+void ScatterDraw::SetDataSourceInternal() {
+	for (int i = 0; i < series.GetCount(); ++i)
+		series[i].SetDataSource_Internal(true);
+}*/
 
+bool ScatterDraw::ThereAreSecondaryY() {
+	for (int i = 0; i < series.GetCount(); ++i)
+		if (!series[i].primaryY)
+			return true;
+	return false;
+}
+	
 void ScatterDraw::SetSequentialX(int index, bool sequential) {
 	ASSERT(IsValid(index));
 	ASSERT(!series[index].IsDeleted());
@@ -1185,17 +1197,35 @@ int ScatterDraw::GetId(int index) {
 	return series[index].id;
 }
 
-void ScatterDraw::RemoveSeries(int index) {
+bool ScatterDraw::RemoveSeries(int index) {
 	ASSERT(IsValid(index));
 	ASSERT(!series[index].IsDeleted());
 	
+	if (WhenRemoveSeries)
+		if (!WhenRemoveSeries(index))
+			return false;
 	series.Remove(index);
 	Refresh();
+	return true;
 }
 
 void ScatterDraw::RemoveAllSeries() {
 	series.Clear();
 	Refresh();
+}
+
+bool ScatterDraw::SwapSeries(int i1, int i2) {
+	ASSERT(IsValid(i1));
+	ASSERT(!series[i1].IsDeleted());
+	ASSERT(IsValid(i2));
+	ASSERT(!series[i2].IsDeleted());
+	
+	if (WhenSwapSeries)
+		if (!WhenSwapSeries(i1, i2))
+			return false;
+	series.Swap(i1, i2);
+	Refresh();	
+	return true;
 }
 
 Drawing ScatterDraw::GetDrawing() {

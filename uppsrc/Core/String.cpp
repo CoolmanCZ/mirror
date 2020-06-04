@@ -24,11 +24,12 @@ void String0::LSet(const String0& s)
 	}
 	else {
 		ptr = (char *)MemoryAlloc32();
-//		qword *d = qptr;
-//		const qword *q = s.qptr;
-//		d[0] = q[0]; d[1] = q[1]; d[2] = q[2]; d[3] = q[3];
-		fast_copy128(ptr, s.ptr);
-		fast_copy128(ptr + 16, s.ptr + 16);
+		qword *d = qptr;
+		const qword *q = s.qptr;
+		d[0] = q[0];
+		d[1] = q[1];
+		d[2] = q[2];
+		d[3] = q[3];
 	}
 }
 
@@ -45,54 +46,40 @@ void String0::LFree()
 		MemoryFree32(ptr);
 }
 
-dword String0::LEqual(const String0& s) const
+bool String0::LEq(const String0& s) const
 {
 	int l = GetCount();
-	if(s.GetCount() != l) return 1;
-#ifdef CPU_64
-	const qword *qa = (const qword *)Begin();
-	const qword *qb = (const qword *)s.Begin();
-	while(l >= 8) {
-		if(*qa++ != *qb++) return 1;
-		l -= 8;
-	}
-	const dword *da = (const dword *)qa;
-	const dword *db = (const dword *)qb;
-	if((l & 4) && *da++ != *db++) return 1;
-#else
-	const dword *da = (const dword *)Begin();
-	const dword *db = (const dword *)s.Begin();
-	while(l >= 4) {
-		if(*da++ != *db++) return 1;
-		l -= 4;
-	}
-#endif
-	const word *wa = (const word *)da;
-	const word *wb = (const word *)db;
-	if((l & 2) && *wa++ != *wb++) return 1;
-	return (l & 1) ? *(const char *)wa != *(const char *)wb : 0;
+	return l == s.GetCount() && inline_memeq8_aligned(begin(), s.begin(), l);
 }
 
-unsigned String0::LHashValue() const
+hash_t String0::LHashValue() const
 {
 	int l = LLen();
-	if(l < 15) {
-		dword w[4];
-		w[0] = w[1] = w[2] = w[3] = 0;
-		memcpy8((char *)w, ptr, l);
-		((byte *)w)[SLEN] = l;
-		return CombineHash(w[0], w[1], w[2], w[3]);
+	if(l < 15) { // must be the same as small hash
+#ifdef HASH64
+		qword m[2];
+		m[0] = m[1] = 0;
+		memcpy8((char *)m, ptr, l);
+		((byte *)m)[SLEN] = l;
+		return CombineHash(m[0], m[1]);
+#else
+		dword m[4];
+		m[0] = m[1] = m[2] = m[3] = 0;
+		memcpy8((char *)m, ptr, l);
+		((byte *)m)[SLEN] = l;
+		return CombineHash(m[0], m[1], m[2], m[3]);
+#endif
 	}
 	return memhash(ptr, l);
 }
 
-int String0::LCompare(const String0& s) const
+int String0::Compare(const String0& s) const
 {
 	const char *a = Begin();
 	int la = GetLength();
 	const char *b = s.Begin();
 	int lb = s.GetLength();
-	int q = fast_memcmp(a, b, min(la, lb));
+	int q = inline_memcmp_aligned(a, b, min(la, lb));
 	return q ? q : SgnCompare(la, lb);
 }
 

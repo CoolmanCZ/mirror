@@ -95,12 +95,12 @@ public:
 	Size  GetDots() const               { return dots; }
 	void  SetDPI(Size sz);
 	Size  GetDPI();
-
-	void  CopyAttrs(const ImageBuffer& img);
-	void  CopyAttrs(const Image& img);
 	
 	void  SetResolution(int i)          { resolution = i; }
 	int   GetResolution() const         { return resolution; }
+
+	void  CopyAttrs(const ImageBuffer& img);
+	void  CopyAttrs(const Image& img);
 
 	Size  GetSize() const               { return size; }
 	int   GetWidth() const              { return size.cx; }
@@ -200,7 +200,7 @@ public:
 
 	bool   operator==(const Image& img) const;
 	bool   operator!=(const Image& img) const;
-	dword  GetHashValue() const;
+	hash_t GetHashValue() const;
 	String ToString() const;
 
 	void  Serialize(Stream& s);
