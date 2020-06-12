@@ -1,19 +1,11 @@
-#ifdef PLATFORM_WIN32
-struct RGBA : Moveable<RGBA> {
-	byte b, g, r, a;
-};
-#endif
-
-#ifdef PLATFORM_POSIX
-#if defined(CPU_BE) || defined(PLATFORM_MACOS)
+#ifdef PLATFORM_MACOS
 struct RGBA : Moveable<RGBA> {
         byte a, r, g, b;
 };
 #else
 struct RGBA : Moveable<RGBA> {
-        byte b, g, r, a;
+	byte b, g, r, a;
 };
-#endif
 #endif
 
 inline Stream& operator%(Stream& s, RGBA& c)
@@ -21,8 +13,21 @@ inline Stream& operator%(Stream& s, RGBA& c)
 	return s % c.r % c.g % c.b % c.a;
 }
 
-template <>
-String AsString(const RGBA& c);
+template <> String AsString(const RGBA& c);
+
+template<> inline hash_t GetHashValue(const RGBA& a) { return *(dword *)&a; }
+
+inline bool operator==(const RGBA& a, const RGBA& b)
+{
+	return a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a;
+}
+
+inline bool operator!=(const RGBA& a, const RGBA& b)
+{
+	return !(a == b);
+}
+
+inline RGBA RGBAZero() { RGBA c; c.r = c.g = c.b = c.a = 0; return c; }
 
 #ifndef PLATFORM_WIN32
 inline int        GetRValue(dword c)             { return (byte)(c >> 0); }

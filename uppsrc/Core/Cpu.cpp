@@ -129,21 +129,72 @@ int CPU_Cores()
 
 #endif
 
-#ifdef PLATFORM_WIN32
-bool IsDecentMachine()
-{
-	if(!IsWin2K())
-		return false;
-	MEMORYSTATUS m;
-	GlobalMemoryStatus(&m);
-	return m.dwTotalPhys > 500 * 1024 * 1024;
-}
-#else
-bool IsDecentMachine()
-{
-	return true;
-}
+#ifdef PLATFORM_MACOS
+#include <mach/mach.h>
+#include <mach/vm_statistics.h>
 #endif
+
+void GetSystemMemoryStatus(uint64& total, uint64& available)
+{
+#ifdef PLATFORM_WIN32
+	MEMORYSTATUSEX m;
+	m.dwLength = sizeof(m);
+	if(GlobalMemoryStatusEx(&m)) {
+		total = m.ullTotalPhys;
+		available = m.ullAvailPhys;
+		return;
+	}
+#endif
+#ifdef PLATFORM_LINUX
+	int pgsz = getpagesize();
+	total = sysconf(_SC_PHYS_PAGES);
+	available = sysconf(_SC_AVPHYS_PAGES);
+	if(total >= 0 && available >= 0) {
+		total *= pgsz;
+		available *= pgsz;
+		return;
+	}
+#endif
+#ifdef PLATFORM_MACOS
+	mach_msg_type_number_t count = HOST_VM_INFO_COUNT;
+	vm_statistics_data_t vmstat;
+
+    int mib[2];
+    int64 physical_memory;
+    size_t length;
+
+    // Get the Physical memory size
+    mib[0] = CTL_HW;
+    mib[1] = HW_MEMSIZE;
+    length = sizeof(int64);
+
+	if(host_statistics(mach_host_self(), HOST_VM_INFO, (host_info_t)&vmstat, &count) == KERN_SUCCESS &&
+	   sysctl(mib, 2, &physical_memory, &length, NULL, 0) >= 0) {
+		int pgsz = getpagesize();
+		available = (vmstat.free_count + vmstat.inactive_count) * pgsz;
+//		available = physical_memory - (vmstat.wire_count + vmstat.inactive_count) * pgsz;
+		total = physical_memory;
+		return;
+	}
+#endif
+#ifdef PLATFORM_FREEBSD
+	int64 page_size;
+    struct vmtotal vmt;
+	size_t vmt_size, uint_size;
+
+    vmt_size = sizeof(vmt);
+    uint_size = sizeof(page_size);
+
+    if(sysctlbyname("vm.vmtotal", &vmt, &vmt_size, NULL, 0) >= 0 &&
+       sysctlbyname("vm.stats.vm.v_page_size", &page_size, &uint_size, NULL, 0) >= 0) {
+		available = vmt.t_free * page_size;
+		total = vmt.t_avm * page_size;
+		return;
+    }
+#endif
+	total = 256*1024*1024;
+	available = 16*1024*1024;
+}
 
 #define ENDIAN_SWAP { while(count--) { EndianSwap(*v++); } }
 

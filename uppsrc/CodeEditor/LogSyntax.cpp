@@ -1,6 +1,8 @@
 #include "CodeEditor.h"
 
 namespace Upp {
+	
+#define LTIMING(x) // RTIMING(x)
 
 inline bool Is3(const wchar *s, int c)
 {
@@ -9,6 +11,7 @@ inline bool Is3(const wchar *s, int c)
 
 void LogSyntax::Highlight(const wchar *s, const wchar *end, HighlightOutput& hls, CodeEditor *editor, int line, int64 pos)
 {
+	LTIMING("LogSyntax::Highlight");
 	const HlStyle& ink = hl_style[INK_NORMAL];
 	HlStyle err = hl_style[INK_ERROR];
 	err.bold = true;
@@ -18,27 +21,27 @@ void LogSyntax::Highlight(const wchar *s, const wchar *end, HighlightOutput& hls
 	bool sep_line = false;
 	while(s < end) {
 		int c = *s;
-		const wchar *s0 = s;
-		if(s + 3 <= end && (Is3(s, '-') || Is3(s, '*') || Is3(s, '=') || Is3(s, '+') ||
-		                    Is3(s, '#') || Is3(s, ':') || Is3(s, '%') || Is3(s, '$')))
+		dword pair = MAKELONG(s[0], s[1]);
+	#define P2(x) MAKELONG(x, x)
+		if(s + 3 <= end && findarg(pair, P2('-'), P2('*'), P2('='), P2('+'), P2('#'), P2(':'), P2('%'), P2('$')) >= 0 && s[2] == c)
 			sep_line = true;
+		if(findarg(pair, MAKELONG('0', 'x'), MAKELONG('0', 'X'), MAKELONG('0', 'b'), MAKELONG('0', 'B')) >= 0)
+			s = HighlightHexBin(hls, s, 2, thousands_separator);
+		else
 		if(IsDigit(c))
 			s = HighlightNumber(hls, s, thousands_separator, false, false);
 		else
 		if(c == '\'' || c == '\"') {
+			const wchar *s0 = s;
 			s++;
 			for(;;) {
-				if(s >= end) {
-					hls.Put(1, ink);
-					s = s0 + 1;
-					break;
-				}
-				if(*s == c) {
+				int c1 = *s;
+				if(s >= end || c1 == c) {
 					s++;
 					hls.Put((int)(s - s0), hl_style[INK_CONST_STRING]);
 					break;
 				}
-				s += 1 + (s[0] == '\\' && s[1] == c);
+				s += 1 + (c1 == '\\' && s[1] == c);
 			}
 		}
 		else
@@ -57,6 +60,11 @@ void LogSyntax::Highlight(const wchar *s, const wchar *end, HighlightOutput& hls
 			hls.Put(w.GetCount(), hl ? err : st ? stt : ink);
 			hl_line = hl_line || hl;
 			st_line = st_line || st;
+		}
+		else
+		if(c == '\\' && s[1]) {
+			hls.Put(2, ink);
+			s += 2;
 		}
 		else {
 			bool hl = findarg(c, '[', ']', '(', ')', ':', '-', '=', '{', '}', '/', '<', '>', '*',

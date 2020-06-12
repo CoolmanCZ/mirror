@@ -1,6 +1,6 @@
 #include "Builders.h"
 
-#ifdef PLATFORM_COCOA
+#ifdef PLATFORM_OSX
 
 #include <Draw/Draw.h>
 #include <plugin/png/png.h>

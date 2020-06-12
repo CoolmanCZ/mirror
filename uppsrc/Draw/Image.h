@@ -8,18 +8,6 @@ enum ImageKind {
 	IMAGE_OPAQUE,
 };
 
-inline bool operator==(const RGBA& a, const RGBA& b)
-{
-	return a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a;
-}
-
-inline bool operator!=(const RGBA& a, const RGBA& b)
-{
-	return !(a == b);
-}
-
-inline RGBA RGBAZero() { RGBA c; c.r = c.g = c.b = c.a = 0; return c; }
-
 inline void Fill(RGBA *t, RGBA c, int n) { memset32(t, *(dword *)&c, n); }
 inline void Copy(RGBA *t, const RGBA *s, int n) { memcpy_t(t, s, n); }
 
@@ -186,6 +174,7 @@ public:
 	int   GetKindNoScan() const;
 	int   GetKind() const;
 	int   GetResolution() const;
+	bool  IsOpaque() const                    { return GetKind() == IMAGE_OPAQUE; }
 
 	const RGBA *Begin() const                 { return data ? ~data->buffer : NULL; }
 	const RGBA *begin() const                 { return Begin(); }

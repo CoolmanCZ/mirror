@@ -40,6 +40,10 @@
 
 #include "config.h"
 
+#if defined(flagSTD_NEWDELETE) && !defined(STD_NEWDELETE)
+#define STD_NEWDELETE
+#endif
+
 #ifndef CPP_11
 #error This version of U++ REQUIRES C++11
 #endif
@@ -361,6 +365,8 @@ class JsonIO;
 #include "InMap.hpp"
 
 #include "Huge.h"
+
+#include "ValueCache.h"
 
 #ifdef PLATFORM_WIN32
 NTL_MOVEABLE(POINT)

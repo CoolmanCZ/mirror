@@ -349,10 +349,10 @@ private:
 	
 	struct Key : Moveable<Key> {
 		K            key;
-		const void  *type;
+		String       type;
 		
 		bool operator==(const Key& b) const { return key == b.key && type == b.type; }
-		hash_t GetHashValue() const { return CombineHash(key, (uintptr_t)type); }
+		hash_t GetHashValue() const { return CombineHash(key, type); }
 	};
 
 	Index<Key>   key;
@@ -365,7 +365,8 @@ private:
 	int  foundsize;
 	int  newsize;
 	bool flag;
-
+	
+	const int InternalSize = 3 * (sizeof(Item) + sizeof(Key) + 24) / 2;
 
 	void Unlink(int i);
 	void LinkHead(int i);
@@ -462,7 +463,10 @@ void LRUCache<T, K>::AdjustSize(P getsize)
 	count = 0;
 	for(int i = 0; i < data.GetCount(); i++)
 		if(!key.IsUnlinked(i)) {
-			size += (data[i].size = getsize(*data[i].data));
+			int sz = getsize(*data[i].data);
+			if(sz >= 0)
+				data[i].size = sz + InternalSize;
+			size += data[i].size;
 			count++;
 		}
 }
@@ -479,7 +483,6 @@ int LRUCache<T, K>::Remove(P predicate)
 			Unlink(i);
 			key.Unlink(i);
 			n++;
-			break;
 		}
 		else
 			i++;
@@ -538,12 +541,12 @@ T& LRUCache<T, K>::Get(const Maker& m)
 {
 	Key k;
 	k.key = m.Key();
-	k.type = &typeid(m);
+	k.type = typeid(m).name();
 	int q = key.Find(k);
 	if(q < 0) {
 		q = key.Put(k);
 		Item& t = data.At(q);
-		t.size = m.Make(t.data.Create());
+		t.size = m.Make(t.data.Create()) + InternalSize;
 		size += t.size;
 		newsize += t.size;
 		t.flag = flag;
