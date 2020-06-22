@@ -2,7 +2,7 @@
 
 #include <plugin/lz4/lz4.h>
 
-#define LTIMING(x)    // RTIMING(x)
+#define LTIMING(x)    // DTIMING(x)
 #define LLOG(x)       // DLOG(x)
 #define LTIMESTOP(x)  // RTIMESTOP(x)
 
@@ -24,6 +24,12 @@ INITIALIZER(CodeBase)
 {
 	void InitializeTopicModule();
 	InitializeTopicModule();
+}
+
+CppBase& CodeBase()
+{
+	static CppBase b;
+	return b;
 }
 
 ArrayMap<String, SourceFileInfo> source_file;
@@ -87,12 +93,6 @@ String CodeBaseCacheFile()
 	return AppendFileName(CodeBaseCacheDir(), GetVarsName() + '.' + IdeGetCurrentMainPackage() + '.' + IdeGetCurrentBuildMethod() + ".codebase");
 }
 
-CppBase& CodeBase()
-{
-	static CppBase b;
-	return b;
-}
-
 static bool   s_console;
 
 void BrowserScanError(int line, const String& text, int file)
@@ -103,6 +103,7 @@ void BrowserScanError(int line, const String& text, int file)
 
 void SerializeCodeBase(Stream& s)
 {
+	CppBaseLock __;
 	MLOG(s.IsLoading());
 	source_file.Serialize(s);
 	MLOG("source_file " << MemoryUsedKb());
@@ -114,6 +115,7 @@ void SerializeCodeBase(Stream& s)
 
 void SaveCodeBase()
 {
+	CppBaseLock __;
 	LTIMING("SaveCodeBase");
 	LLOG("Save code base " << CodeBase().GetCount());
 	RealizeDirectory(CodeBaseCacheDir());
@@ -126,6 +128,7 @@ void SaveCodeBase()
 
 bool TryLoadCodeBase(const char *pattern)
 {
+	CppBaseLock __;
 	LLOG("+++ Trying to load " << pattern);
 	FindFile ff(pattern);
 	String path;
@@ -152,6 +155,7 @@ bool TryLoadCodeBase(const char *pattern)
 
 void LoadCodeBase()
 {
+	CppBaseLock __;
 	MLOG("LoadCodeBase start: " << MemoryUsedKb());
 	TryLoadCodeBase(CodeBaseCacheFile()) ||
 	TryLoadCodeBase(AppendFileName(CodeBaseCacheDir(), GetVarsName() + ".*." + IdeGetCurrentBuildMethod() + ".codebase")) ||
@@ -165,12 +169,14 @@ void FinishCodeBase()
 {
 	LTIMING("FinishBase");
 
+	CppBaseLock __;
 	Qualify(CodeBase());
 }
 
 void LoadDefs()
 {
 	LTIMING("LoadDefs");
+	CppBaseLock __;
 	Vector<String> defs;
 	defs.Add(ConfigFile("global.defs"));
 	const Workspace& wspc = GetIdeWorkspace();
@@ -200,6 +206,7 @@ void LoadDefs()
 
 void BaseInfoSync(Progress& pi)
 { // clears temporary caches (file times etc..)
+	CppBaseLock __;
 	PPSync(TheIde()->IdeGetIncludePath());
 
 	LTIMESTOP("Gathering files");
@@ -209,6 +216,9 @@ void BaseInfoSync(Progress& pi)
 	LTIMING("Gathering files");
 	pi.SetText("Gathering files");
 	pi.SetTotal(wspc.GetCount());
+	
+	{
+	RTIMESTOP("GatherSources");
 	for(int pass = 0; pass < 2; pass++)
 		for(int i = 0; i < wspc.GetCount(); i++) {
 			pi.Step();
@@ -221,6 +231,7 @@ void BaseInfoSync(Progress& pi)
 					GatherSources(path, path);
 			}
 		}
+	}
 
 	SweepPPFiles(GetAllSources());
 }
@@ -242,18 +253,20 @@ Index<String> sTimePath;
 Time GetDependsTime(const Vector<int>& file)
 {
 	LTIMING("CreateTimePrint");
-	static Index<String> path;
-	String r;
 	Time tm = Time::Low();
-	for(int i = 0; i < file.GetCount(); i++)
-		if(file[i] < sTimePath.GetCount())
-			tm = max(tm, GetFileTimeCached(sTimePath[file[i]]));
+	INTERLOCKED {
+		static Index<String> path;
+		for(int i = 0; i < file.GetCount(); i++)
+			if(file[i] < sTimePath.GetCount())
+				tm = max(tm, GetFileTimeCached(sTimePath[file[i]]));
+	}
 	return tm;
 }
 
 bool CheckFile(SourceFileInfo& f, const String& path)
 {
 	LTIMING("CheckFile");
+	CppBaseLock __;
 	Time ftm = GetFileTimeCached(path);
 	bool tmok = f.time == ftm;
 	f.time = ftm;
@@ -261,42 +274,24 @@ bool CheckFile(SourceFileInfo& f, const String& path)
 		return tmok;
 	if(!IsNull(f.depends_time) && tmok && f.depends_time == GetDependsTime(f.depends) && f.dependencies_md5sum.GetCount())
 		return true;
-	Cpp pp;
-	FileIn in(path);
-	String npath = NormalizeSourcePath(path);
-	pp.Preprocess(npath, in, GetMasterFile(npath), true);
-	String md5 = pp.GetDependeciesMd5(GetPPFile(path).keywords);
+	Index<String> visited;
+	String md5 = GetDependeciesMD5(path, visited);
 	bool r = f.dependencies_md5sum == md5 && tmok;
 #ifdef HAS_CLOG
 	if(!r) CLOG(path << " " << f.dependencies_md5sum << " " << md5);
 #endif
 	f.depends.Clear();
 	f.dependencies_md5sum = md5;
-	for(int i = 0; i < pp.visited.GetCount(); i++)
-		f.depends.Add(sTimePath.FindAdd(pp.visited[i]));
+	for(int i = 0; i < visited.GetCount(); i++)
+		f.depends.Add(sTimePath.FindAdd(visited[i]));
 	f.depends_time = GetDependsTime(f.depends);
 	return r;
-}
-
-void ParseFiles(Progress& pi, const Index<int>& parse_file)
-{
-	pi.SetTotal(parse_file.GetCount());
-	pi.SetPos(0);
-	pi.AlignText(ALIGN_LEFT);
-	for(int i = 0; i < parse_file.GetCount(); i++) {
-		String path = GetSourceFilePath(parse_file[i]);
-		pi.SetText(GetFileName(GetFileFolder(path)) + "/" + GetFileName(path));
-		pi.Step();
-		FileIn fi(path);
-		LDUMP(path);
-		LDUMP(parse_file[i]);
-		ParseSrc(fi, parse_file[i], callback1(BrowserScanError, i));
-	}
 }
 
 void UpdateCodeBase2(Progress& pi)
 {
 	CLOG("============= UpdateCodeBase2 " << GetSysTime());
+	CppBaseLock __;
 	pi.SetText("Checking source files");
 	pi.SetPos(0);
 	Index<int>  keep_file;
@@ -333,12 +328,27 @@ void UpdateCodeBase2(Progress& pi)
 		if(!source_file.IsUnlinked(i))
 			CLOG(i << " " << source_file.GetKey(i) << " " << source_file[i].dependencies_md5sum << " " << source_file[i].time);
 #endif
-	
-	ParseFiles(pi, parse_file);
+
+	// This is the only place where parsing runs in parallel
+	pi.SetTotal(parse_file.GetCount());
+	pi.SetPos(0);
+	pi.AlignText(ALIGN_LEFT);
+	LLOG("=========================");
+	RTIMESTOP("Parsing files");
+	CoFor(parse_file.GetCount(), [&](int i) {
+		String path = GetSourceFilePath(parse_file[i]);
+		pi.SetText(GetFileName(GetFileFolder(path)) + "/" + GetFileName(path));
+		pi.Step();
+		FileIn fi(path);
+		LDUMP(path);
+		LDUMP(parse_file[i]);
+		ParseSrc(fi, parse_file[i], callback1(BrowserScanError, i));
+	});
 }
 
 void UpdateCodeBase(Progress& pi)
 {
+	CppBaseLock __;
 	BaseInfoSync(pi);
 
 	UpdateCodeBase2(pi);
@@ -348,10 +358,9 @@ void ParseSrc(Stream& in, int file, Event<int, const String&> error)
 {
 	String path = GetSourceFilePath(file);
 	CLOG("====== Parse " << file << ": " << path);
+	CppBase base;
 	Vector<String> pp;
 	String ext = ToLower(GetFileExt(path));
-	int filetype = FILE_OTHER;
-	Cpp cpp;
 	if(ext == ".lay")
 		pp.Add(PreprocessLayFile(path));
 	else
@@ -360,27 +369,20 @@ void ParseSrc(Stream& in, int file, Event<int, const String&> error)
 	else
 	if(ext == ".sch")
 		pp.Append(PreprocessSchFile(path));
-	else {
-		cpp.Preprocess(path, in, GetMasterFile(GetSourceFilePath(file)));
-		filetype = decode(ext, ".h", FILE_H, ".hpp", FILE_HPP,
-		                       ".cpp", FILE_CPP, ".icpp", FILE_CPP, ".c", FILE_C, FILE_OTHER);
-		StringStream pin(cpp.output);
-		Parser p;
-		p.Do(pin, CodeBase(), file, filetype, GetFileName(path), error, Vector<String>(),
-		     cpp.namespace_stack, cpp.namespace_using);
-	}
+	else
+		PreprocessParse(base, in, file, path, error);
 
-	for(int i = 0; i < pp.GetCount(); i++) {
-		StringStream pin(pp[i]);
-		Parser p;
-		p.Do(pin, CodeBase(), file, filetype, GetFileName(path), error, Vector<String>(),
-		     cpp.namespace_stack, cpp.namespace_using);
-	}
+	for(int i = 0; i < pp.GetCount(); i++)
+		Parse(base, pp[i], file, FILE_OTHER, path, error, Vector<String>(), Index<String>());
+	
+	INTERLOCKED
+		CodeBase().Append(pick(base));
 }
 
 void CodeBaseScanFile0(Stream& in, const String& fn)
 {
 	LLOG("===== CodeBaseScanFile " << fn);
+	CppBaseLock __;
 
 	InvalidateFileTimeCache(NormalizeSourcePath(fn));
 	PPSync(TheIde()->IdeGetIncludePath());
@@ -395,6 +397,7 @@ void CodeBaseScanFile0(Stream& in, const String& fn)
 
 void CodeBaseScanFile(Stream& in, const String& fn)
 {
+	CppBaseLock __;
 	CodeBaseScanFile0(in, fn);
 	FinishCodeBase();
 }
@@ -402,7 +405,8 @@ void CodeBaseScanFile(Stream& in, const String& fn)
 void CodeBaseScanFile(const String& fn, bool auto_check)
 {
 	LLOG("CodeBaseScanFile " << fn);
-	String md5sum = GetPPFile(fn).md5sum;
+	CppBaseLock __;
+	String md5sum = GetPPMD5(fn);
 	FileIn in(fn);
 	CodeBaseScanFile(in, fn);
 	int file = GetSourceFileIndex(fn);
@@ -420,6 +424,7 @@ void CodeBaseScanFile(const String& fn, bool auto_check)
 void ClearCodeBase()
 {
 	// TODO: Create combined defs
+	CppBaseLock __;
 	CleanPP();
 	CodeBase().Clear();
 	source_file.Clear();
@@ -430,6 +435,7 @@ void SyncCodeBase()
 	LTIMING("SyncCodeBase");
 	LTIMESTOP("SyncCodeBase");
 	CLOG("============= Sync code base");
+	CppBaseLock __;
 	if(IsNull(IdeGetCurrentMainPackage())) {
 		ClearCodeBase();
 		return;
@@ -442,6 +448,7 @@ void SyncCodeBase()
 
 void NewCodeBase()
 {
+	CppBaseLock __;
 	ReduceCodeBaseCache();
 	if(IsNull(IdeGetCurrentMainPackage())) {
 		ClearCodeBase();
@@ -461,6 +468,7 @@ void NewCodeBase()
 
 void RescanCodeBase()
 {
+	CppBaseLock __;
 	ClearCodeBase();
 	s_console = true;
 	Progress pi;
@@ -472,5 +480,6 @@ void RescanCodeBase()
 
 bool ExistsBrowserItem(const String& item)
 {
+	CppBaseLock __;
 	return GetCodeRefItem(item);
 }

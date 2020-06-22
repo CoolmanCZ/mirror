@@ -463,7 +463,7 @@ void AssistEditor::Assist()
 	include_assist = false;
 	if(IncludeAssist())
 		return;
-	Parser parser;
+	ParserContext parser;
 	Context(parser, GetCursor32());
 	Index<String> in_types;
 	while(iscid(Ch(q - 1)) || Ch(q - 1) == '~')
@@ -1000,6 +1000,7 @@ String AssistEditor::MakeDefinition(const String& cls, const String& _n)
 void Ide::IdeGotoCodeRef(String coderef)
 {
 	LLOG("IdeGotoLink " << coderef);
+	CppBaseLock __;
 	if(IsNull(coderef)) return;
 	String scope, item;
 	SplitCodeRef(coderef, scope, item);

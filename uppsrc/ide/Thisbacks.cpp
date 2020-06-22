@@ -41,6 +41,7 @@ void ThisbacksDlg::CbEdit(One<Ctrl>& ctrl)
 
 ThisbacksDlg::ThisbacksDlg(const String& scope)
 {
+	CppBaseLock __;
 	CtrlLayoutOKCancel(*this, "THISBACKs");
 	list.AddColumn("Defined in");
 	list.AddColumn("Type");
@@ -65,6 +66,7 @@ ThisbacksDlg::ThisbacksDlg(const String& scope)
 void ThisbacksDlg::GatherCallbacks(const String& pfx, Index<String>& done,
                                    const String& scope, int access)
 {
+	CppBaseLock __;
 	if(IsNull(scope))
 		return;
 	String h = pfx + scope;
@@ -167,7 +169,7 @@ INITBLOCK
 
 void AssistEditor::Thisbacks()
 {
-	Parser ctx;
+	ParserContext ctx;
 	Context(ctx, GetCursor32());
 	if(IsNull(ctx.current_scope) || !ctx.IsInBody())
 		return;

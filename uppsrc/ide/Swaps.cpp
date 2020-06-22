@@ -2,7 +2,7 @@
 
 #define LLOG(x)  // DLOG(x)
 
-void AssistEditor::SwapSContext(Parser& p)
+void AssistEditor::SwapSContext(ParserContext& p)
 {
 	int i = GetCursor32();
 	if(Ch(i - 1) == ';')
@@ -23,9 +23,10 @@ void AssistEditor::SwapSContext(Parser& p)
 
 bool Ide::SwapSIf(const char *cref)
 {
+	CppBaseLock __;
 	if(designer || !editor.assist_active)
 		return false;
-	Parser p;
+	ParserContext p;
 	editor.SwapSContext(p);
 	int q = CodeBase().Find(p.current_scope);
 	LLOG("SwapS scope: " << p.current_scope << ", name " << p.current_name << ", key " << p.current_key);

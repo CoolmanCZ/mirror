@@ -9,6 +9,7 @@ struct AssistItemInfo : CppItem {
 void GatherVirtuals(ArrayMap<String, AssistItemInfo>& item, const String& scope,
                     Index<String>& done)
 {
+	CppBaseLock __;
 	if(IsNull(scope))
 		return;
 	if(done.Find(scope) >= 0)
@@ -116,7 +117,7 @@ INITBLOCK
 
 void AssistEditor::Virtuals()
 {
-	Parser ctx;
+	ParserContext ctx;
 	Context(ctx, GetCursor32());
 	if(IsNull(ctx.current_scope) || ctx.current_scope == "::" || ctx.IsInBody())
 		return;

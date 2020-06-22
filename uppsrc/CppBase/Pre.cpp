@@ -1,11 +1,9 @@
 #include "CppBase.h"
+#include "Internal.h"
+
+#define LTIMING(x) // DTIMING(x)
 
 namespace Upp {
-
-#ifdef _MSC_VER
-#pragma inline_depth(255)
-#pragma optimize("t", on)
-#endif
 
 void SLPos(SrcFile& res)
 {
@@ -67,12 +65,15 @@ SrcFile PreProcess(Stream& in, Parser& parser) // This is not really C preproces
 			   s[3] == 'i' && s[4] == 'n' && s[5] == 'e' && !iscid(s[6])) {
 				s += 6;
 				while(*s == ' ' || *s == '\t') s++;
-				String macro;
+				const char *b = s;
 				while(iscid(*s))
-					macro.Cat(*s++);
+					s++;
+				String macro(b, s);
 				if(*s == '(') {
+					b = s;
 					while(*s != ')' && *s)
-						macro.Cat(*s++);
+						s++;
+					macro.Cat(b, s);
 					macro << ')';
 				}
 				if(include)

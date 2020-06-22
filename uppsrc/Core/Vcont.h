@@ -77,6 +77,8 @@ public:
 	const T *operator~() const           { return ptr; }
 	T          *Get()                    { return ptr; }
 	const T    *Get() const              { return ptr; }
+	T          *begin()                  { return ptr; }
+	const T    *begin() const            { return ptr; }
 
 	void Alloc(size_t size)              { Clear(); New(size); }
 	void Alloc(size_t size, const T& in) { Clear(); New(size, in); }
@@ -212,7 +214,9 @@ public:
 	template <class B> bool operator>(const B& x) const  { return Compare(x) > 0; }
 #endif
 
-	Vector()                         { Zero(); }
+	Vector()                                  { Zero(); }
+	explicit Vector(int n)                    { items = n; vector = RawAlloc(n); alloc = n; Construct(vector, vector + n); }
+	explicit Vector(int n, const T& init)     { items = n; vector = RawAlloc(n); alloc = n; DeepCopyConstruct(vector, vector + n, init); }
 	~Vector() {
 		Free();
 		return; // Constraints:
@@ -321,7 +325,7 @@ public:
 	void     Insert(int i, const Array& x, int offset, int count);
 	template <class Range>
 	void     InsertRange(int i, const Range& r);
-	void     Insert(int i, Array&& x)             { vector.InsertPick(i, pick(x.vector)); }
+	void     Insert(int i, Array&& x)             { vector.Insert(i, pick(x.vector)); }
 	void     Append(const Array& x)               { Insert(GetCount(), x); }
 	void     Append(const Array& x, int o, int c) { Insert(GetCount(), x, o, c); }
 	void     Append(Array&& x)                    { InsertPick(GetCount(), pick(x)); }
@@ -362,8 +366,10 @@ public:
 	template <class B> bool operator<(const B& x) const  { return Compare(x) < 0; }
 	template <class B> bool operator>(const B& x) const  { return Compare(x) > 0; }
 
-	Array()                             {}
-	~Array()                            { Free(); }
+	Array()                                          {}
+	explicit Array(int n) : vector(n)                { Init(vector.begin(), vector.end()); }
+	explicit Array(int n, const T& init) : vector(n) { Init(vector.begin(), vector.end(), init); }
+	~Array()                                         { Free(); }
 
 // Pick assignment & copy. Picked source can only Clear(), ~Vector(), operator=, operator<<=
 	Array(Array&& v) : vector(pick(v.vector))  {}

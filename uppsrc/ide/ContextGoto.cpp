@@ -12,6 +12,7 @@
 
 bool GetIdScope(String& os, const String& scope, const String& id, Index<String>& done)
 {
+	CppBaseLock __;
 	if(done.Find(scope) >= 0)
 		return Null;
 	done.Add(scope);
@@ -113,6 +114,7 @@ bool Ide::OpenLink(const String& s, int pos)
 
 void Ide::ContextGoto0(int pos)
 {
+	CppBaseLock __;
 	if(designer)
 		return;
 	int lp = pos;
@@ -196,7 +198,7 @@ void Ide::ContextGoto0(int pos)
 	String tp;
 	Vector<String> xp = editor.ReadBack(q, Index<String>()); // try to load expression like "x[i]." or "ptr->"
 	Index<String> type;
-	Parser parser;
+	ParserContext parser;
 	int ci = pos;
 	for(;;) {
 		int c = editor.Ch(ci);

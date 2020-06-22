@@ -1,9 +1,10 @@
 #include "CppBase.h"
+#include "Internal.h"
 
 namespace Upp {
 
 #define LLOG(x)
-#define LTIMING(x)  // RTIMING(x)
+#define LTIMING(x)  DTIMING(x)
 
 void CppItem::Serialize(Stream& s)
 {
@@ -83,6 +84,12 @@ void CppBase::Sweep(const Index<int>& file, bool keep)
 			n.Remove(nr); // only remove some items
 	}
 	Remove(remove);
+}
+
+void CppBase::Append(CppBase&& base)
+{
+	for(int i = 0; i < base.GetCount(); i++)
+		GetAdd(base.GetKey(i)).Append(pick(base[i]));
 }
 
 void CppBase::RemoveFile(int filei)
