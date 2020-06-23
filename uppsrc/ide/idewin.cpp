@@ -621,6 +621,7 @@ Ide::Ide()
 	editfile_repo = NOT_REPO_DIR;
 	
 	auto_rescan = auto_check = true;
+	file_scan = 0;
 
 	editfile_line_endings = Null;
 
