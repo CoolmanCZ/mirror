@@ -61,15 +61,33 @@ constexpr int findarg(const T& sel, const K& k, const L& ...args)
 //$-constexpr auto decode(const T& x, const T1& p0, const V1& v0, ...);
 
 template <class T, class V>
-constexpr auto decode(const T& sel, const V& def)
+constexpr const V& decode(const T& sel, const V& def)
 {
 	return def;
 }
 
 template <class T, class K, class V, typename... L>
-constexpr auto decode(const T& sel, const K& k, const V& v, const L& ...args)
+constexpr V decode(const T& sel, const K& k, const V& v, const L& ...args)
 {
-	return sel == k ? v : decode(sel, args...);
+	return sel == k ? v : (V)decode(sel, args...);
+}
+
+template <class T>
+constexpr const char *decode_chr_(const T& sel, const char *def)
+{
+	return def;
+}
+
+template <class T, class K, typename... L>
+constexpr const char *decode_chr_(const T& sel, const K& k, const char *v, const L& ...args)
+{
+	return sel == k ? v : decode_chr_(sel, args...);
+}
+
+template <class T, class K, typename... L>
+constexpr const char *decode(const T& sel, const K& k, const char *v, const L& ...args)
+{
+	return decode_chr_(sel, k, v, args...);
 }
 
 //$-constexpr T get_i(int i, const T& p0, const T1& p1, ...);
@@ -77,7 +95,7 @@ constexpr auto decode(const T& sel, const K& k, const V& v, const L& ...args)
 template <typename A, typename... T>
 constexpr A get_i(int i, const A& p0, const T& ...args)
 {
-	A list[] = { p0, args... };
+	A list[] = { p0, (A)args... };
 	return list[clamp(i, 0, (int)sizeof...(args))];
 }
 
