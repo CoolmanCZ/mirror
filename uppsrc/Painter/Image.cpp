@@ -2,21 +2,21 @@
 
 namespace Upp {
 
-#ifdef CPU_X86
+#ifdef CPU_SIMD
 
 force_inline
-int IntAndFraction(__m128 x, __m128& fraction)
+int IntAndFraction(f32x4 x, f32x4& fraction)
 {
-	x = _mm_add_ps(x, _mm_set1_ps(8000)); // cvttps truncates toward 0, need to fix negatives
-	__m128i m = _mm_cvttps_epi32(x);
-	fraction = _mm_sub_ps(x, _mm_cvtepi32_ps(m));
-	return _mm_cvtsi128_si32(m) - 8000;
+	x = x + f32all(8000); // Truncate truncates toward 0, need to fix negatives
+	i32x4 m = Truncate(x);
+	fraction = x - ToFloat(m);
+	return (int)m - 8000;
 }
 
 force_inline
-int Int(__m128 x)
+int Int(f32x4 x)
 {
-	return _mm_cvtsi128_si32(_mm_cvttps_epi32(_mm_add_ps(x, _mm_set1_ps(8000)))) - 8000;
+	return (int)Truncate(x + f32all(8000)) - 8000;
 }
 
 struct PainterImageSpanData {
@@ -96,18 +96,18 @@ struct PainterImageSpan : SpanSource, PainterImageSpanData {
 		Pointf p0 = xform.Transform(Pointf(x, y));
 		Pointf dd = xform.Transform(Pointf(x + 1, y)) - p0;
 		
-		__m128 x0 = _mm_set_ps1((float)p0.x);
-		__m128 y0 = _mm_set_ps1((float)p0.y);
-		__m128 dx = _mm_set_ps1((float)dd.x);
-		__m128 dy = _mm_set_ps1((float)dd.y);
-		__m128 ii = _mm_setzero_ps();
-		__m128 v1 = _mm_set_ps1(1);
-		__m128 ix, iy;
+		f32x4 x0 = f32all(p0.x);
+		f32x4 y0 = f32all(p0.y);
+		f32x4 dx = f32all(dd.x);
+		f32x4 dy = f32all(dd.y);
+		f32x4 ii = 0;
+		f32x4 v1 = f32all(1);
+		f32x4 ix, iy;
 
 		auto GetIXY = [&] {
-			ix = _mm_add_ps(x0, _mm_mul_ps(ii, dx));
-			iy = _mm_add_ps(y0, _mm_mul_ps(ii, dy));
-			ii = _mm_add_ps(ii, v1);
+			ix = x0 + ii * dx;
+			iy = y0 + ii * dy;
+			ii += v1;
 		};
 
 		fixed = hstyle && vstyle;
@@ -128,7 +128,7 @@ struct PainterImageSpan : SpanSource, PainterImageSpanData {
 		}
 		while(len--) {
 			GetIXY();
-			__m128 fx, fy;
+			f32x4 fx, fy;
 			Point l(IntAndFraction(ix, fx), IntAndFraction(iy, fy));
 			if(hstyle == FILL_HREPEAT)
 				l.x = (l.x + ax) % cx;
@@ -144,7 +144,7 @@ struct PainterImageSpan : SpanSource, PainterImageSpanData {
 					*span = *GetPixel(l.x, l.y);
 			}
 			else {
-				__m128 p00, p01, p10, p11;
+				f32x4 p00, p01, p10, p11;
 				if(l.x > 0 && l.x < maxx && l.y > 0 && l.y < maxy) {
 					p00 = LoadRGBAF(Pixel(l.x + 0, l.y + 0));
 					p01 = LoadRGBAF(Pixel(l.x + 0, l.y + 1));
@@ -158,20 +158,20 @@ struct PainterImageSpan : SpanSource, PainterImageSpanData {
 					p11 = LoadRGBAF(GetPixel(l.x + 1, l.y + 1));
 				}
 
-				p01 = _mm_mul_ps(p01, fy);
-				p11 = _mm_mul_ps(p11, fy);
-				p10 = _mm_mul_ps(p10, fx);
-				p11 = _mm_mul_ps(p11, fx);
+				p01 = p01 * fy;
+				p11 = p11 * fy;
+				p10 = p10 * fx;
+				p11 = p11 * fx;
 				
-				fx = _mm_sub_ps(v1, fx);
-				fy = _mm_sub_ps(v1, fy);
+				fx = v1 - fx;
+				fy = v1 - fy;
 				
-				p00 = _mm_mul_ps(p00, fy);
-				p10 = _mm_mul_ps(p10, fy);
-				p00 = _mm_mul_ps(p00, fx);
-				p01 = _mm_mul_ps(p01, fx);
+				p00 = p00 * fy;
+				p10 = p10 * fy;
+				p00 = p00 * fx;
+				p01 = p01 * fx;
 			
-				StoreRGBAF(span, _mm_add_ps(p00, _mm_add_ps(p01, _mm_add_ps(p10, p11))));
+				StoreRGBAF(span, p00 + p01 + p10 + p11);
 			}
 			++span;
 		}

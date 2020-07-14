@@ -44,10 +44,6 @@
 #define STD_NEWDELETE
 #endif
 
-#ifndef CPP_11
-#error This version of U++ REQUIRES C++11
-#endif
-
 #ifdef _MSC_VER
 	#ifndef _CPPRTTI
 		#error  RTTI must be enabled !!!
@@ -279,6 +275,26 @@ class JsonIO;
 
 #include "Ops.h"
 #include "Fn.h"
+
+#ifdef flagNOSIMD
+	#ifdef CPU_SSE2
+	#undef CPU_SSE2
+	#endif
+	#ifdef CPU_NEON
+	#undef CPU_NEON
+	#endif
+#endif
+
+#ifdef CPU_SSE2
+#include "SIMD_SSE2.h"
+#define CPU_SIMD 1
+#endif
+
+#ifdef CPU_NEON
+#include "SIMD_NEON.h"
+#define CPU_SIMD 1
+#endif
+
 #include "Mem.h"
 #include "Atomic.h"
 #include "Topt.h"
@@ -368,6 +384,13 @@ class JsonIO;
 #include "Huge.h"
 
 #include "ValueCache.h"
+
+#ifdef CPU_SIMD
+String AsString(const f32x4& x);
+String AsString(const i32x4& x);
+String AsString(const i16x8& x);
+String AsString(const i8x16& x);
+#endif
 
 #ifdef PLATFORM_WIN32
 NTL_MOVEABLE(POINT)
