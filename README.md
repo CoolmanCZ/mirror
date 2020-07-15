@@ -6,7 +6,6 @@ This Ultimate++ fork contains basic GIT integration with the Ultimate++ IDE.
 |branch  | status|
 |---     |---    |
 |master  | [![Build Status](https://travis-ci.org/CoolmanCZ/ultimatepp.svg?branch=master)](https://travis-ci.org/CoolmanCZ/ultimatepp)  |
-|develop | [![Build Status](https://travis-ci.org/CoolmanCZ/ultimatepp.svg?branch=develop)](https://travis-ci.org/CoolmanCZ/ultimatepp) |
 
 ## About
 ![alt text](uppbox/uppweb/Resources/Images/Logo.png?raw=true "Ultimate++ Logo")
