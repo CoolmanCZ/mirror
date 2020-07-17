@@ -84,6 +84,9 @@ Git& Git::CmdExecute(const String& cmd)
 				else
 					tmp.Cat(h);
 				pi.Step();
+
+				if (pi.Canceled())
+					p.Kill();
 			}
 			errorcode = p.GetExitCode();
 
