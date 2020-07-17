@@ -1,7 +1,7 @@
 description "OpenSSL based SSL support for Core\3770,128,128";
 
 library
-	"crypto ssl";
+	"ssl crypto";
 
 library(WIN32) gdi32;
 
