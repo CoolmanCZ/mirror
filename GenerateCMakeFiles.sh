@@ -35,13 +35,16 @@ GENERATE_PACKAGE="0"        # set to "1" - create a tarball package of the proje
 #GENERATE_NOT_PCH="1"                # set to "1" - do not build with precompiled header support (precompiled header support is enabled as default)
 #GENERATE_NOT_REMOVE_UNUSED_CODE="1" # set to "1" - do not use compile and link parameters to remove unused code and functions (unused code and functions are removed as default)
 
-#CMAKE_VERBOSE_OVERWRITE="0" # set to "0" - do not generate cmake verbose makefile output (even when the debug flag is set)
+CMAKE_VERBOSE_OVERWRITE="0" # set to "0" - do not generate cmake verbose makefile output (even when the debug flag is set)
 #CMAKE_VERBOSE_OVERWRITE="1" # set to "1" - always generate cmake verbose makefile output
 
 UPP_SRC_BASE="."
 UPP_SRC_DIR="${UPP_SRC_BASE}/uppsrc"
 
 PROJECT_NAME="${UPP_SRC_DIR}/ide/ide.upp"
+
+PROJECT_EXTRA_COMPILE_FLAGS=""
+PROJECT_EXTRA_LINK_FLAGS=""
 
 if [ $# -lt 1 ]; then
   echo "# linux build"
