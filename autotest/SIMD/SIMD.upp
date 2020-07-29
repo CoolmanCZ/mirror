@@ -1,0 +1,11 @@
+uses
+	Core,
+	Painter;
+
+file
+	Etalon.log,
+	SIMD.cpp;
+
+mainconfig
+	"" = "";
+
