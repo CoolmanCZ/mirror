@@ -16,7 +16,7 @@ library(WIN32 !NOSSL SHARED DEBUG) "libeay32MDd ssleay32MDd";
 
 library(WIN32) gdi32;
 
-library(LINUX !NOSSL) "crypto ssl";
+library(LINUX !NOSSL) "ssl crypto";
 
 link(WIN32 DEBUG MSC SO) /nodefaultlib:libc;
 

@@ -68,14 +68,18 @@
 				#if __DragonFly__
 					#define PLATFORM_DRAGONFLY 1
 				#endif
-			#elif __sun
-				#define PLATFORM_SOLARIS 1
+			#elif sun || __sun
+				#if __SVR4 || __svr4__
+					#define PLATFORM_SOLARIS 1
+				#else
+					#define PLATFORM_SUNOS 1
+				#endif
 			#else
 				#error Unknown OS
 			#endif
 		#endif
 	#endif
-	
+
 	#if  __x86_64
 		#define CPU_LE 1
 		#define CPU_LITTLE_ENDIAN 1

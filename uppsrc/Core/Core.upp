@@ -11,6 +11,8 @@ library(BSD !OSX !OPENBSD) "pthread rt execinfo";
 
 library(SOLARIS) "posix4 dl";
 
+library(SUNOS) "socket";
+
 library(!WIN32 & !NOSO) z;
 
 library(OSX) pthread;

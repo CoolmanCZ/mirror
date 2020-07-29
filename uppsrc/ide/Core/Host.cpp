@@ -367,6 +367,11 @@ void LocalHost::AddFlags(Index<String>& cfg)
 #ifdef PLATFORM_OSX11
 	cfg.Add("OSX11");
 #endif
+
+#ifdef PLATFORM_SUNOS
+	cfg.Add("SUNOS");
+#endif
+
 }
 
 const Vector<String>& LocalHost::GetExecutablesDirs() const
@@ -379,7 +384,8 @@ bool LocalHost::HasPlatformFlag(const Index<String>& cfg)
 	static const Index<String> platformFlags = {
 		"WIN32", "POSIX", "LINUX", "ANDROID",
 		"BSD", "FREEBSD", "OPENBSD", "NETBSD",
-		"DRAGONFLY", "SOLARIS", "OSX11", "OSX"
+		"DRAGONFLY", "SOLARIS", "OSX11", "OSX",
+		"SUNOS"
 	};
 
 	for(const String& flag : cfg)
