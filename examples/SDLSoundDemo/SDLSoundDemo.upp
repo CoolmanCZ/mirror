@@ -1,5 +1,7 @@
 description "Demonstrates sound output with SDL2\377";
 
+pkg_config(POSIX) sdl2;
+
 uses
 	CtrlLib,
 	Synth;
