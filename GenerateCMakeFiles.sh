@@ -25,7 +25,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 START=$(date +%s.%N)
 
-source ../upp_cmake/GenerateCMakeFiles-lib.sh
+source upp_cmake/GenerateCMakeFiles-lib.sh
 
 GENERATE_VERBOSE="1"        # set to "1" - enable additional output during script processing on the screen
 GENERATE_DEBUG="0"          # set to "1" - enable debug output during script processing on the screen
