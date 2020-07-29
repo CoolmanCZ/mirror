@@ -23,7 +23,10 @@
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-START=$(date +%s.%N)
+OS=`uname -o`
+if [ "${OS}" == "GNU/Linux" ]; then
+	START=$(date +%s.%N)
+fi
 
 source upp_cmake/GenerateCMakeFiles-lib.sh
 
@@ -57,6 +60,8 @@ fi
 
 generate_main_cmake_file "${PROJECT_NAME}" "${PROJECT_FLAGS}"
 
-DUR=$(echo "$(date +%s.%N) - ${START}" | bc)
-echo "Execution time: $(date -d@0${DUR} -u +%H:%M:%S.%N)"
+if [ "${OS}" == "GNU/Linux" ]; then
+	DUR=$(echo "$(date +%s.%N) - ${START}" | bc)
+	echo "Execution time: $(date -d@0${DUR} -u +%H:%M:%S.%N)"
+fi
 
