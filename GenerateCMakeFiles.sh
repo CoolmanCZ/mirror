@@ -23,8 +23,9 @@
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+START=$(date +%s.%N)
 
-source upp_cmake/GenerateCMakeFiles-lib.sh
+source ../upp_cmake/GenerateCMakeFiles-lib.sh
 
 GENERATE_VERBOSE="1"        # set to "1" - enable additional output during script processing on the screen
 GENERATE_DEBUG="0"          # set to "1" - enable debug output during script processing on the screen
@@ -55,4 +56,7 @@ else
 fi
 
 generate_main_cmake_file "${PROJECT_NAME}" "${PROJECT_FLAGS}"
+
+DUR=$(echo "$(date +%s.%N) - ${START}" | bc)
+echo "Execution time: $(date -d@0${DUR} -u +%H:%M:%S.%N)"
 
