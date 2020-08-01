@@ -53,10 +53,10 @@ PROJECT_EXTRA_COMPILE_FLAGS=""
 PROJECT_EXTRA_LINK_FLAGS=""
 
 if [ $# -lt 1 ]; then
-  echo "# linux build"
+  echo "# POSIX build"
   PROJECT_FLAGS="-DflagGUI -DflagMT -DflagGCC -DflagLINUX -DflagPOSIX -DflagSHARED"
 else
-  echo "# MinGW build"
+  echo "# WINDOWS build"
   PROJECT_FLAGS="-DflagGUI -DflagMT -DflagGCC -DflagPOSIX"
 fi
 
