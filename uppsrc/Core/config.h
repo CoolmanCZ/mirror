@@ -69,11 +69,7 @@
 					#define PLATFORM_DRAGONFLY 1
 				#endif
 			#elif sun || __sun
-				#if __SVR4 || __svr4__
-					#define PLATFORM_SOLARIS 1
-				#else
-					#define PLATFORM_SUNOS 1
-				#endif
+				#define PLATFORM_SOLARIS 1
 			#else
 				#error Unknown OS
 			#endif
