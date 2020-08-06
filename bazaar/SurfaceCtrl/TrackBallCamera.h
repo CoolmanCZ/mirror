@@ -9,23 +9,35 @@
 
 namespace Upp{
 	
-class TrackBallCamera : public CameraEuler {
+class TrackBallCamera : public UOGL_Camera {
 	private :
 		glm::vec3 up = glm::vec3(0.0f,1.0f,0.0f);
 	public:
 		glm::vec3 focus = glm::vec3(0.0f,0.0f,0.0f);; //point the camera will focus
 		
-		TrackBallCamera(){
-			ConstraintPitchEnable = false;
-			ConstraintYawEnable = false;
+		TrackBallCamera(){}
+		virtual TrackBallCamera* Clone(){
+			return new TrackBallCamera(*this);
 		}
+
+		
 		TrackBallCamera& Init(){
 			SetPosition(glm::vec3(0.0f,0.0f,5.0f));
 			LookAt(focus);
 			return *this;
 		}
 		virtual glm::mat4 GetViewMatrix(){
-			return glm::lookAt(focus - transform.GetPosition(),focus, up);
+			if(!MouseMiddlePressed){
+				transform.SetNewRotation(glm::conjugate(glm::toQuat(glm::lookAt(focus - transform.GetPosition(),focus, up))));
+				return glm::lookAt(focus - transform.GetPosition(),focus, up);
+				//return transform.GetViewMatrix();
+			}else{
+					glm::mat4 rotate = glm::mat4_cast(transform.GetQuaterion());
+					glm::mat4 translate = glm::mat4(1.0f);
+					translate = glm::translate(translate,focus - transform.GetPosition());
+					return rotate * translate;
+					//return glm::lookAt(focus - transform.GetPosition(),transform.GetFront(), up);
+			}
 		}
 
 		
@@ -57,28 +69,26 @@ class TrackBallCamera : public CameraEuler {
 		}
 		
 		virtual TrackBallCamera& ProcessMouveMouvement(float xoffset, float yoffset){
-			xoffset *= MouseSensitivity;
-			yoffset *= MouseSensitivity;
-		
-		
-			//Another approach
-			// Determine rotation angles from the change in mouse position
-			float a1 = (xoffset/2.0f) *-1.0f;
-			float a2 = yoffset/2.0f;
-			
-			// Rotate the target->eye vectoraround the up vector
-			glm::vec3 v =  transform.GetPosition() + focus;
-			v = RotateAround(a1,v,up);
-			
-			// Determine the right vector and rotate the target->eye and up around it
-			glm::vec3 r = glm::cross(up,v);
-			r = glm::normalize(r);
-			v = RotateAround(a2,v,r);
-			up = RotateAround(a2,up,r);
-			up = glm::normalize(up);
-			transform.SetNewPosition(v);
-			
-
+			if(MouseLeftPressed){
+				xoffset *= MouseSensitivity;
+				yoffset *= MouseSensitivity;
+				//Another approach
+				// Determine rotation angles from the change in mouse position
+				float a1 = (xoffset/2.0f) *-1.0f;
+				float a2 =  yoffset/2.0f;
+				
+				// Rotate the target->eye vectoraround the up vector
+				glm::vec3 v =  transform.GetPosition() + focus;
+				v = RotateAround(a1,v,up);
+				
+				// Determine the right vector and rotate the target->eye and up around it
+				glm::vec3 r = glm::cross(up,v);
+				r = glm::normalize(r);
+				v = RotateAround(a2,v,r);
+				up = RotateAround(a2,up,r);
+				up = glm::normalize(up);
+				transform.SetNewPosition(v);
+			}
 			//transform.SetNewRotation(glm::quatLookAt(focus - transform.GetPosition(), glm::vec3(0.0f,1.0f,0.0f)) );
 			
 			

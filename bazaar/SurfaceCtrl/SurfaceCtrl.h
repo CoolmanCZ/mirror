@@ -19,6 +19,7 @@
 
 #include "Object3D.h"
 #include "Shader.h"
+#include "FreeCamera.h"
 #include "TrackBallCamera.h"
 #include "Object3DProvider.h"
 
@@ -32,24 +33,23 @@ class SurfaceCtrl : public GLCtrl_glad{
 		Upp::Vector<Object3D> allObjects;
 		Object3D Axis;
 		
-		TrackBallCamera camera;
+		UOGL_Camera* camera;
+		TrackBallCamera trackball;
+		FreeCamera euler;
+		
+		
 				
 		OpenGLProgram DrawMeshNoLight;
 		OpenGLProgram DrawMeshLight;
 		OpenGLProgram DrawMeshLine;
 		OpenGLProgram DrawMeshNormal;
 		
-		
-		void InitShader();
-		
 		bool ShowAxis = false;
-		bool pressed = false;
-		Point StartPress;
 		
 		float sizeW = 800.0f;
 		float sizeH = 600.0f;
 		
-		void ProcessMouse(float pitch, float yaw);
+		void InitShader();
 	public:
 		SurfaceCtrl();
 		~SurfaceCtrl();
@@ -58,7 +58,8 @@ class SurfaceCtrl : public GLCtrl_glad{
 		Function <void()> WhenPaint;
 		Function <void()> OnEnd;
 		
-		TrackBallCamera& GetCamera()noexcept{return camera;}
+		TrackBallCamera& GetTrackBallCamera()noexcept{return trackball;}
+		FreeCamera& GetFreeCamera()noexcept{return euler;}
 		
 		void CreateObject(Surface& surf,Upp::Color color)noexcept;
 		
@@ -76,6 +77,9 @@ class SurfaceCtrl : public GLCtrl_glad{
 		virtual void LeftDown(Point p, dword);
 		virtual void LeftUp(Point p, dword);
 		virtual void MouseLeave();
+		virtual void MiddleDown(Point p, dword keyflags);
+		virtual void MiddleUp(Point p, dword keyflags);
+
 };
 }
 #endif
