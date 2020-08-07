@@ -1,0 +1,6 @@
+---
+Checks:          '-*,clang-analyzer-*,bugprone-*,cert-*,clang-diagnostic-*,performance-*,misc-*,portability-*,modernize-*,-modernize-use-trailing-return-type,-readability-*,-readability-convert-member-functions-to-static,-readability-uppercase-literal-suffix,-readability-braces-around-statements'
+WarningsAsErrors: ''
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+FormatStyle:     none
