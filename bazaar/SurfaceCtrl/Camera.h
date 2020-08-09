@@ -14,16 +14,16 @@ class UOGL_Camera{
 	
 		CameraType type = CT_PERSPECTIVE;
 
-		float MaxFOV = 130.0f;
+		float MaxFOV = 160.0f;
 	    float MinFOV = 10.0f;
 	    bool  LimiteFOV = true;
-	    float FOV =90.0f;
+	    float FOV =45.0f;
 
 	    float DrawDisanceMax = 10000.0f;
 		float DrawDistanceMin = 0.1f;
 		
-		float MouvementSpeed = 5.0f;
-	    float MouseSensitivity = 0.1f;
+		float MouvementSpeed = 0.09f;
+	    float MouseSensitivity = 0.08f;
 		
 		Upp::Sizef ScreenSize;
 	public:
@@ -75,7 +75,7 @@ class UOGL_Camera{
 		bool MouseLeftPressed = false;
 		bool MouseMiddlePressed = false;
 };
-
+/*
 class CameraQuaterion :  public UOGL_Camera{
 	protected:
 		float GetRealMouseSensitivity();
@@ -175,5 +175,6 @@ class CameraEuler : public UOGL_Camera{
 		virtual CameraEuler& ProcessKeyboardMouvement(Camera_Movement direction);
 		virtual CameraEuler& ProcessMouveMouvement(float xoffset, float yoffset);
 };
+*/
 }
 #endif
