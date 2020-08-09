@@ -28,7 +28,7 @@ Upp::String GetGitRoot(const Upp::String& p);
 struct Git {
   private:
 	Upp::String gitdir;
-	int errorcode;
+	int errorcode = 0;
 	Upp::Vector<Upp::String> output;
 
   public:

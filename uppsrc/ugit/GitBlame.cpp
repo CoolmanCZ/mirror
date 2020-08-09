@@ -152,6 +152,7 @@ void GitBlame::ShowBlame(const String& filepath)
 
 	Vector<String> output = Blame(filepath).GetOutput();
 	blame.Clear();
+	lines.Clear();
 
 	bool hashDone = false;
 	bool lineDone = false;

@@ -11,13 +11,6 @@ bool CheckGit()
 	String h;
 	if (Sys("git", h) >= 0)
 		return true;
-#ifdef PLATFORM_WIN32
-	Exclamation("[= Unable to execute 'git.exe'!&"
-	            "You can download the git client here: [^https://git-scm.com/downloads^ https://git-scm.com/downloads]]");
-#else
-	Exclamation("[= Unable to execute 'git' binary!&"
-                    "Please install the git client.]");
-#endif
 	return false;
 }
 
@@ -66,9 +59,9 @@ Git& Git::CmdExecute(const String& cmd)
 {
 	String folder = GetGitDir();
 	output.Clear();
-	errorcode = -1;
+	errorcode = 0;
 
-	if (DirectoryExists(folder)) {
+	if (CheckGit() && DirectoryExists(folder)) {
 		Progress pi("Executing git command");
 		String command = "git --no-pager -C " << folder << " " << cmd;
 		LocalProcess p;

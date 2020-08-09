@@ -444,50 +444,51 @@ void Ide::ProjectRepo(Bar& menu)
 
 void Ide::ProjectGit(Bar& menu)
 {
+	bool enable = CheckGit();
 	bool b = IsGitDir(PackagePath(actualpackage));
 
 	if(!menu.IsToolBar()) {
-		menu.Add(!b && (idestate == EDITING), "GIT init repository", GitImg::GitInit(), THISBACK(ExecuteGitInitRepository))
+		menu.Add(enable && !b && (idestate == EDITING), "GIT init repository", GitImg::GitInit(), THISBACK(ExecuteGitInitRepository))
 		.Help("Initialize actual package directory as a Git repository");
 		menu.Separator();
-		menu.Add(true, "GIT config", GitImg::GitConfig(), THISBACK(ExecuteGitConfig))
+		menu.Add(enable, "GIT config", GitImg::GitConfig(), THISBACK(ExecuteGitConfig))
 			.Help("Configure GIT parameters");
-		menu.Add(git_dirs, "GIT history", GitImg::GitSearch(), THISBACK(ExecuteGitHistory))
+		menu.Add(enable && git_dirs, "GIT history", GitImg::GitSearch(), THISBACK(ExecuteGitHistory))
 			.Help("Show GIT repository history");
-		menu.Add(git_dirs, "GIT update status", GitImg::GitStatus(), THISBACK(ExecuteGitUpdateStatus))
+		menu.Add(enable && git_dirs, "GIT update status", GitImg::GitStatus(), THISBACK(ExecuteGitUpdateStatus))
 			.Help("Show difference status between local and remote branches");
 		menu.Separator();
-		menu.Add(b && (idestate == EDITING), "GIT status", GitImg::GitStatus(), THISBACK(ExecuteGitStatus))
+		menu.Add(enable && b && (idestate == EDITING), "GIT status", GitImg::GitStatus(), THISBACK(ExecuteGitStatus))
 			.Help("Status of the branch");
-		menu.Add(git_dirs, "GIT fetch", GitImg::GitFetch(), THISBACK(ExecuteGitFetch))
+		menu.Add(enable && git_dirs, "GIT fetch", GitImg::GitFetch(), THISBACK(ExecuteGitFetch))
 			.Help("Fetch request");
-		menu.Add(git_dirs && (idestate == EDITING), "GIT merge", GitImg::GitMerge(), THISBACK(ExecuteGitMerge))
+		menu.Add(enable && git_dirs && (idestate == EDITING), "GIT merge", GitImg::GitMerge(), THISBACK(ExecuteGitMerge))
 			.Help("Merge repository ");
-		menu.Add(b && (idestate == EDITING), "GIT stash", GitImg::GitStash(), THISBACK(ExecuteGitStash))
+		menu.Add(enable && b && (idestate == EDITING), "GIT stash", GitImg::GitStash(), THISBACK(ExecuteGitStash))
 			.Help("Stash changes in the main project");
-		menu.Add(b && (idestate == EDITING), "GIT stash apply", GitImg::GitUnstash(), THISBACK(ExecuteGitStashApply))
+		menu.Add(enable && b && (idestate == EDITING), "GIT stash apply", GitImg::GitUnstash(), THISBACK(ExecuteGitStashApply))
 			.Help("Apply stashed changes in the main project");
 	}
-		menu.Add(git_dirs && (idestate == EDITING), "GIT commit", GitImg::GitCommit(), THISBACK(ExecuteGitCommit))
+		menu.Add(enable && git_dirs && (idestate == EDITING), "GIT commit", GitImg::GitCommit(), THISBACK(ExecuteGitCommit))
 			.Help("Commit changes");
 	if(!menu.IsToolBar()) {
-		menu.Add(git_dirs && (idestate == EDITING), "GIT push", GitImg::GitPush(), THISBACK(ExecuteGitPush))
+		menu.Add(enable && git_dirs && (idestate == EDITING), "GIT push", GitImg::GitPush(), THISBACK(ExecuteGitPush))
 			.Help("Push request");
-		menu.Add(git_dirs && (idestate == EDITING), "GIT branch", GitImg::GitBranch(), THISBACK(ExecuteGitConfigBranch))
+		menu.Add(enable && git_dirs && (idestate == EDITING), "GIT branch", GitImg::GitBranch(), THISBACK(ExecuteGitConfigBranch))
 			.Help("Manage / Create branches");
 		menu.Separator();
 		if (patchpending) {
-			menu.Add(idestate == EDITING, "GIT patch apply/abort", GitImg::GitDiffAbort(), THISBACK(ExecuteGitPatchAbort))
+			menu.Add(enable && idestate == EDITING, "GIT patch apply/abort", GitImg::GitDiffAbort(), THISBACK(ExecuteGitPatchAbort))
 				.Help("Restore the original branch and abort the patching operation");
 		} else {
-			menu.Add(idestate == EDITING, "GIT patch apply/abort", GitImg::GitDiffApply(), THISBACK(ExecuteGitPatchApply))
+			menu.Add(enable && idestate == EDITING, "GIT patch apply/abort", GitImg::GitDiffApply(), THISBACK(ExecuteGitPatchApply))
 				.Help("Apply GIT patch from the file");
 		}
 		menu.Separator();
 	}
-		menu.Add(b && editfile_repo == GIT_DIR && !editfile_isfolder, AK_REPODIFF, GitImg::GitSearchHistory(), THISBACK(ExecuteGitFileHistory))
+		menu.Add(enable && b && editfile_repo == GIT_DIR && !editfile_isfolder, AK_REPODIFF, GitImg::GitSearchHistory(), THISBACK(ExecuteGitFileHistory))
 			.Help("Show GIT history of the file");
-		menu.Add(b && editfile_repo == GIT_DIR && !editfile_isfolder, AK_GITBLAME, GitImg::GitSearchBlame(), THISBACK(ExecuteGitBlame))
+		menu.Add(enable && b && editfile_repo == GIT_DIR && !editfile_isfolder, AK_GITBLAME, GitImg::GitSearchBlame(), THISBACK(ExecuteGitBlame))
 			.Help("Show what revision and which author has later modified each row of the edited file.");
 }
 
@@ -501,8 +502,9 @@ void Ide::Project(Bar& menu)
 
 		ProjectGit(menu);
 		menu.Gap(4);
-		if (editfile_repo == GIT_DIR)
-			menu.Add(gitbranchlist, HorzLayoutZoom(100));
+		if (editfile_repo == GIT_DIR) {
+			menu.Add(CheckGit() && idestate == EDITING, gitbranchlist, HorzLayoutZoom(100));
+		}
 		menu.Separator();
 
 		menu.Add(mainconfiglist, HorzLayoutZoom(100));

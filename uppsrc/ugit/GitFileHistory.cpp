@@ -81,8 +81,8 @@ void GitFileHistory::ShowFileHistory(const String& filepath)
 	SetGitDir(GetGitRoot(filepath));
 
 	Vector<String> output = GetFileLog(filepath).GetOutput();
-
 	commitlist.Clear();
+	diffctrl.Clear();
 
 	Vector<String> data;
 	String diff;
