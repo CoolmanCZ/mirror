@@ -5,6 +5,7 @@
 #include <Surface/Surface.h>
 #include "Transform.h"
 #include "Shader.h"
+#include "BoundingBox.h"
 namespace Upp{
 enum DrawType { DT_TRIANGLE, DT_QUAD };
 /*
@@ -73,11 +74,14 @@ class Object3D : public Upp::Moveable<Object3D>{
 		
 		unsigned int SurfaceCount = 0;
 		VolumeEnvelope *env = nullptr;
-		
+
 		bool showMesh = true;
 		bool showMeshLine = true;
 		bool showMeshNormal = false;
 		bool showLight = true;
+		
+		BoundingBox boundingBox;
+		bool showBoundingBox = false;
 			
 		Transform transform;
 		
@@ -87,22 +91,49 @@ class Object3D : public Upp::Moveable<Object3D>{
 		Vector<float> ReadBuffer(GLuint buffer, int SurfaceNumber,int count)noexcept;
 		void BuildOpenGLData(Upp::Vector<float>& surface, Upp::Vector<float>& normal, Upp::Vector<float>& color);
 		
-		
 	public:
 		Object3D(){}
+		Object3D(const Object3D& obj){*this = obj;}
 		Object3D(Surface& surface,Upp::Color = Green());
 		Object3D(Upp::Vector<float>& surface, Upp::Vector<float>& normal, Upp::Vector<float>& color);
+		
+		Object3D& operator=(const Object3D& obj){
+			VerticesVBO = obj.VerticesVBO;
+			ColorVBO = obj.ColorVBO;
+			NormalVBO = obj.NormalVBO;
+			VAO = obj.VAO;
+			material = obj.material; //The material object is a representation of material property of the object (it change how light affect it)
+			lineColor = obj.lineColor;
+			lineOpacity = obj.lineOpacity;
+			lineWidth = obj.lineWidth;
+			normalColor = obj.normalColor;
+			normalOpacity = obj.normalOpacity;
+			normalLenght = obj.normalLenght;
+			SurfaceCount = obj.SurfaceCount;
+			env =obj.env;
+			showMesh = obj.showMesh;
+			showMeshLine = obj.showMeshLine;
+			showMeshNormal = obj.showMeshNormal;
+			showLight = obj.showLight;
+			boundingBox = obj.boundingBox;
+			showBoundingBox = obj.showBoundingBox;
+			transform = obj.transform;
+			DrawType = obj.DrawType;
+			return *this;
+		}
 		
 		Object3D& SetDrawType(GLenum dt)noexcept{DrawType = dt; return *this;}
 		Object3D& ShowMesh(bool b = true)noexcept{showMesh = b; return *this;}
 		Object3D& ShowMeshLine(bool b = true)noexcept{showMeshLine = b; return *this;}
 		Object3D& ShowMeshNormal(bool b = true)noexcept{showMeshNormal = b; return *this;}
 		Object3D& ShowLight(bool b = true)noexcept{showLight = b; return *this;}
+		Object3D& ShowBoundingBox(bool b = true)noexcept{showBoundingBox = b; return *this;}
 		
 		bool GetShowMesh()const noexcept{return showMesh;}
 		bool GetShowMeshLine()const noexcept{return showMeshLine;}
 		bool GetShowMeshNormal()const noexcept{return showMeshNormal;}
 		bool GetShowLight()const noexcept{return showLight;}
+		bool GetShowBoundingBox()const noexcept{return showBoundingBox;}
 		
 		Object3D& SetLineColor(Color color)noexcept{lineColor = color; return *this;}
 		Object3D& SetNormalColor(Color color)noexcept{normalColor = color; return *this;}
@@ -124,7 +155,17 @@ class Object3D : public Upp::Moveable<Object3D>{
 		unsigned int GetSurfaceCount()noexcept{return SurfaceCount;}
 		
 		VolumeEnvelope* GetVolumeEnvelope(){return env;}
-		Object3D& SetVolumeEnvelope(VolumeEnvelope& envelope){env = &envelope;return *this;}
+		Object3D& SetVolumeEnvelope(VolumeEnvelope& envelope){env = &envelope; boundingBox.SetBoundingBox(env->minX,env->minY,env->minZ,env->maxX,env->maxY,env->maxZ); return *this;}
+		BoundingBox& GetBoundingBox(){return boundingBox;}
+		BoundingBox GetBoundingBoxTransformed()const noexcept{
+			BoundingBox box(boundingBox);
+			return box.TransformBy(transform.GetModelMatrix());
+		}
+		
+		bool TestLineIntersection(const glm::vec3 & start, const glm::vec3 & end){
+			BoundingBox box  = GetBoundingBoxTransformed();
+			return box.LineIntersection(start,end);
+		}
 		/*
 			Write into OpenGL buffer return true if operation have been done correctly.
 			/!\ True do not mean OpenGL will provide good things, it just mean buffer have been

@@ -254,6 +254,10 @@ void Object3D::Draw(glm::mat4 projectionMatrix, glm::mat4 viewMatrix,glm::vec3 v
 			normal.SetFloat("normal_length",normalLenght );
 			glDrawArrays(GL_TRIANGLES, 0, SurfaceCount);
 		}
+		if(showBoundingBox){
+			boundingBox.Draw(transform.GetModelMatrix(),viewMatrix,projectionMatrix,line);
+		//	boundingBox.Draw(glm::mat4(1.0f),viewMatrix,projectionMatrix,line);
+		}
 	}
 }
 }

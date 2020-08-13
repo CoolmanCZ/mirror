@@ -119,6 +119,8 @@ CONSOLE_APP_MAIN
 	
 	SaveScript("install", install_script);
 	SaveScript("clean", clean_script);
+	SaveScript("configure", LoadFile(upp_src + "/configure"));
+	SaveScript("configure_makefile", LoadFile(upp_src + "/configure_makefile"));
 	SaveText("README", readme);
 
 #ifdef _DEBUG
@@ -127,12 +129,12 @@ CONSOLE_APP_MAIN
 	#define OPTS " -arvb "
 #endif
 
-#ifndef PLATFORM_SOLARIS
+#ifdef PLATFORM_LINUX
 	Syx(GetHomeDirFile("bin/umk") + " ./uppsrc umk GCC32 " OPTS  + release + "/umks32");
 #endif
 
 	Syx(GetHomeDirFile("bin/umk") + " ./uppsrc umk GCC -rvsM");
-	FixMakefile(release + "/uMakefile", release + "/Makefile");
+	FixMakefile(release + "/umkMakefile", release + "/Makefile");
 	Syx(GetHomeDirFile("bin/umk") + " ./uppsrc ide GCC -rvsM theide");
 	FixMakefile(release + "/Makefile", release + "/Makefile");
 

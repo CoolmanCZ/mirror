@@ -19,8 +19,7 @@
 
 #include "Object3D.h"
 #include "Shader.h"
-#include "TrackBallCamera.h"
-#include "SketchupCamera.h"
+#include "MagicCamera.h"
 #include "Object3DProvider.h"
 
 namespace Upp{
@@ -30,17 +29,13 @@ class SurfaceCtrl : public GLCtrl_glad{
 		bool loaded = false;
 		Object3DProvider objProvider;
 		
-		Upp::Vector<Object3D> allObjects;
+		Upp::Array<Object3D> allObjects;
+		Upp::Vector<Object3D*> SelectedObject;
+		
 		Object3D Axis;
 		Object3D CameraFocus;
-		
-		/*
-		UOGL_Camera* camera;
-		TrackBallCamera trackball;
-		FreeCamera euler;
-		*/
-		SketchupCamera camera;
-		//TrackBallCamera camera;
+
+		MagicCamera camera;
 				
 		OpenGLProgram DrawMeshNoLight;
 		OpenGLProgram DrawMeshLight;
@@ -64,7 +59,7 @@ class SurfaceCtrl : public GLCtrl_glad{
 		
 	
 		//FreeCamera& GetFreeCamera()noexcept{return euler;}
-		SketchupCamera& GetSketchupCamera()noexcept{return camera;}
+		MagicCamera& GetSketchupCamera()noexcept{return camera;}
 	//	TrackBallCamera& GetTrackBallCamera()noexcept{return camera;}
 		
 		void CreateObject(Surface& surf,Upp::Color color)noexcept;

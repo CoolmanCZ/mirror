@@ -21,7 +21,21 @@ class SketchupCamera : public UOGL_Camera {
 				transform.SetPosition(0,0,5);
 			return *this;
 		}
-		
+	
+		virtual glm::mat4 GetProjectionMatrix(Upp::Sizef SS){
+			ScreenSize = SS;
+			if(type == CT_PERSPECTIVE){
+				return glm::perspective(glm::radians(GetFOV()),(float)( ScreenSize.cx / ScreenSize.cy),GetDrawDistanceMin(),GetDrawDisanceMax());//We calculate Projection here since multiple camera can have different FOV
+			}else if(type == CT_ORTHOGRAPHIC){
+				float distance = glm::distance(focus,transform.GetPosition())* (ScreenSize.cx/ScreenSize.cy);
+				float distanceY = glm::distance(focus,transform.GetPosition());
+				return glm::ortho(-distance ,distance ,-distanceY ,distanceY, 0.00001f, 10000.0f);
+			//	return glm::ortho(-glm::distance(focus,transform.GetPosition()) ,glm::distance(focus,transform.GetPosition()) ,-glm::distance(focus,transform.GetPosition()) ,glm::distance(focus,transform.GetPosition()), 0.00001f, 10000.0f);
+			}else{
+				LOG("Swaping to Camera Perspective (cause of unknow type)");
+				return glm::perspective(glm::radians(GetFOV()),(float)( ScreenSize.cx / ScreenSize.cy),GetDrawDistanceMin(),GetDrawDisanceMax());//We calculate Projection here since multiple camera can have different FOV
+			}
+		}
 		
 		virtual glm::mat4 GetViewMatrix(){
 			return glm::lookAt( transform.GetPosition() + focus , focus , transform.GetUp());
@@ -63,21 +77,22 @@ class SketchupCamera : public UOGL_Camera {
 		
 		virtual SketchupCamera& ProcessMouveMouvement(float xoffset, float yoffset){
 			if(MouseMiddlePressed) return ProcessMouseWheelMouvement(xoffset,yoffset);
-			if(MouseLeftPressed) return ProcessMouseLeftMouvement(xoffset,yoffset);
+		//	if(MouseLeftPressed) return ProcessMouseLeftMouvement(xoffset,yoffset);
+			return *this;
 		}
 		
-		virtual bool ProcessKeyBoard(unsigned long Key,int count){
+		virtual bool ProcessKeyBoard(unsigned long Key,int count)noexcept{
 			return true;
 		}
 		
-		virtual SketchupCamera& ProcessMouseScroll(float zdelta){
-			float xoffset = (StartPress.x - (ScreenSize.cx/2)) * 0.005f;
-			float yoffset = (StartPress.y) * 0.005f * -1.0;
-			float Upoffset = (StartPress.y - (ScreenSize.cy/2)) * 0.005f;
+		virtual SketchupCamera& ProcessMouseScroll(float zdelta)noexcept{
+			float xoffset = (lastPress.x - (ScreenSize.cx/2)) * 0.005f;
+			float yoffset = (lastPress.y) * 0.005f * -1.0;
+			float Upoffset = (lastPress.y - (ScreenSize.cy/2)) * 0.005f;
 			bool doX = false, doY = false;
-			if(!forceZoom){
-				if(sqrt(pow( StartPress.x - (ScreenSize.cx/2),2)) > (ScreenSize.cx/20)) doX = true;
-				if(sqrt(pow( StartPress.y - (ScreenSize.cy/2),2)) > (ScreenSize.cy/20)) doY = true;
+			if(!forceZoom && ! (type == CT_ORTHOGRAPHIC)){
+				doX = true;
+				doY = true;
 			}
 			glm::vec3 scaling = (0.1f * (transform.GetPosition()));
 			if(zdelta == - 120){

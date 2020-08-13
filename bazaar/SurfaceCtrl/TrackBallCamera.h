@@ -22,7 +22,7 @@ class TrackBallCamera : public UOGL_Camera {
 
 		
 		TrackBallCamera& Init(){
-			SetPosition(glm::vec3(0.0f,0.0f,5.0f));
+			transform.SetPosition(glm::vec3(0.0f,0.0f,5.0f));
 			LookAt(focus);
 			return *this;
 		}
@@ -141,10 +141,11 @@ class TrackBallCamera : public UOGL_Camera {
 		virtual TrackBallCamera& ProcessMouveMouvement(float xoffset, float yoffset){
 			if(MouseMiddlePressed) return ProcessMouseWheelMouvement(xoffset,yoffset);
 			if(MouseLeftPressed) return ProcessMouseLeftMouvement(xoffset,yoffset);
+			return *this;
 		}
 		
 	
-		virtual bool ProcessKeyBoard(unsigned long Key,int count){
+		virtual bool ProcessKeyBoard(unsigned long Key,int count)noexcept{
 			/*
 				if( Key == Upp::K_Z){
 					objectToFocus->GetTransform().Move(glm::vec3(0,1 * 0.3f,0));
@@ -163,7 +164,7 @@ class TrackBallCamera : public UOGL_Camera {
 			return true;
 		}
 		
-		virtual TrackBallCamera& ProcessMouseScroll(float zdelta){
+		virtual TrackBallCamera& ProcessMouseScroll(float zdelta)noexcept{
 			glm::vec3 camPos = transform.GetPosition();
 			float result = glm::dot(transform.GetPosition(), glm::vec3(0.1f,0.1f,0.1f));
 			
