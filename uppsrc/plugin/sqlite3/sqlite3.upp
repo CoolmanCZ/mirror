@@ -1,8 +1,5 @@
 description "Sqlite3 database engine and U++ interface\3770,128,128";
 
-acceptflags
-	SQLITE_HAS_CODEC;
-
 flags(NOTMFC) "!GUI !CONSOLE";
 
 uses
@@ -12,8 +9,6 @@ library(LINUX) dl;
 
 options
 	"-DSQLITE_CORE -DSQLITE_ENABLE_FTS4 -DSQLITE_ENABLE_FTS3_PARENTHESIS";
-
-options(SQLITE_HAS_CODEC) -DSQLITE_HAS_CODEC;
 
 file
 	Sqlite3.h,
