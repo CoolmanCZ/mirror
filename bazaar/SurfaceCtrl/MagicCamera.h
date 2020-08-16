@@ -5,7 +5,10 @@
 namespace Upp{
 	class MagicCamera : public UOGL_Camera{
 	private:
-		Array<Object3D>* allObjects = nullptr;
+		Upp::Array<Object3D>* allObjects = nullptr;
+		Upp::Vector<Object3D*>* Selected = nullptr;
+		
+		bool OnObject = false;
 		
 		glm::vec3 focus;
 		
@@ -48,6 +51,7 @@ namespace Upp{
 		MagicCamera& Init(){transform.SetPosition(0, 10, 20); focus = glm::vec3(0.0f,0.0f,0.0f); return *this;}
 		
 		MagicCamera& SetAllObjects(Array<Object3D>& all){allObjects = &all;return *this;}
+		MagicCamera& SetAllSelected(Upp::Vector<Object3D*>& selected){Selected = &selected; return *this;}
 	
 		glm::mat4 GetProjectionMatrix(){
 			if(type == CT_PERSPECTIVE){
@@ -87,6 +91,19 @@ namespace Upp{
 			return *this;
 		}
 		
+		MagicCamera& DetermineRotationPoint(Point& p){
+			
+			Object3D* obj = Pick(p.x,p.y);
+			if(obj){
+				focus = obj->GetBoundingBoxTransformed().GetCenter();
+				OnObject = true;
+			}else{
+				OnObject = false;
+			}
+			return *this;
+		}
+		
+		
 		virtual MagicCamera& ProcessMouseWheelMouvement(float xoffset,float yoffset){
 			xoffset *= MouseSensitivity;
 			yoffset *= MouseSensitivity;
@@ -99,14 +116,14 @@ namespace Upp{
 			glm::vec3 pos = focus - transform.GetPosition();
 			float angle = glm::dot(glm::normalize(transform.GetFront()),glm::normalize(pos));
 			
-			float distance = glm::distance(focus,transform.GetPosition());
-			if(angle < 0.98f){
+	//		float distance = glm::distance(focus,transform.GetPosition());
+			if(angle < 0.90f){
 				if (angle  < 0){
 					focus = glm::vec3(0.0f,0.0f,0.0f);
 				}
 				axis =  transform.GetPosition() + (transform.GetFront()*10.0f);
 			}
-			if(distance > 70) transform.SetPosition(transform.GetPosition() *0.999f);
+	//		if(distance > 70) transform.SetPosition(transform.GetPosition() *0.999f);
 			
 			glm::vec3 between = transform.GetPosition() - axis;
 			glm::quat upRotation = Transform::GetQuaterion(a1,transform.GetWorldUp());
@@ -127,9 +144,25 @@ namespace Upp{
 			return obj;
 		}
 		
+		virtual MagicCamera& ProcessMouseMouveLeftClick(float xoffset, float yoffset){
+			if(Selected){
+				glm::vec3 y = transform.GetUp() * ((yoffset * -1.0f) * MouvementSpeed);
+				glm::vec3 x = transform.GetRight() * (xoffset * MouvementSpeed);
+				
+				for(Object3D* obj : *(Selected)){
+					if(obj){
+						obj->GetTransform().Move(x + y);
+					}
+				}
+				CenterFocus();
+			}
+			return *this;
+		}
+		
 		virtual MagicCamera& ProcessMouveMouvement(float xoffset, float yoffset){
 			if(MouseMiddlePressed && !ShiftPressed ) return ProcessMouseWheelMouvement(xoffset,yoffset);
 			if(MouseMiddlePressed && ShiftPressed ) return ProcessMouseWheelTranslation(xoffset,yoffset);
+			if(MouseLeftPressed)  return ProcessMouseMouveLeftClick(xoffset,yoffset);
 			return *this;
 		}
 		
@@ -138,17 +171,19 @@ namespace Upp{
 		}
 		
 		virtual MagicCamera& ProcessMouseScroll(float zdelta)noexcept{
+			DetermineRotationPoint(lastPress);
+			
 			float xoffset = (lastPress.x - (ScreenSize.cx/2)) * 0.005f;
 			float yoffset = (lastPress.y) * 0.005f * -1.0;
 			float Upoffset = (lastPress.y - (ScreenSize.cy/2)) * 0.005f;
 			bool doX = false, doY = false;
-			if(!(type == CT_ORTHOGRAPHIC)){
+			if(!(type == CT_ORTHOGRAPHIC) && !OnObject){
 				/*if(sqrt(pow( StartPress.x - (ScreenSize.cx/2),2)) > (ScreenSize.cx/20)) doX = true;
 				if(sqrt(pow( StartPress.y - (ScreenSize.cy/2),2)) > (ScreenSize.cy/20)) doY = true;*/
 				doX = true;
 				doY = true;
 			}
-			glm::vec3 scaling = (0.1f * (transform.GetPosition()));
+			glm::vec3 scaling = 0.1f *  (transform.GetPosition() - focus);
 			if(zdelta == - 120){
 				    if(doX)transform.SetPosition(transform.GetPosition() - (transform.GetRight() * xoffset));
 					if(doY){
@@ -164,8 +199,8 @@ namespace Upp{
 					transform.SetPosition(transform.GetPosition() - (transform.GetUp() * Upoffset));
 				}
 				if(!doY && !doX){
-					float dot = sqrt(pow(glm::dot(transform.GetPosition(),scaling),2));
-					if(dot > 1.0f)
+					float dot = sqrt(pow(glm::dot(focus,scaling),2));
+					if(dot > 3.0f)
 						transform.SetPosition(transform.GetPosition() - scaling);
 				}
 			}
@@ -175,19 +210,22 @@ namespace Upp{
 		glm::vec3 GetFocus(){return focus;}
 		MagicCamera& ResetFocus(){focus = glm::vec3(0,0,0); return *this;}
 		
-		MagicCamera& CenterFocus(const Vector<Object3D*>&  selectedObj){
-			if(selectedObj.GetCount() > 0){
-				glm::vec3 center = selectedObj[0]->GetBoundingBoxTransformed().GetCenter(); // The crash is occuring here, During copy operator,
-																							//the Append function on vector make things crash
-				if(selectedObj.GetCount() > 1){
-					for(int e = 1; e < selectedObj.GetCount(); e++){
-						glm::vec3 center2 = selectedObj[e]->GetBoundingBoxTransformed().GetCenter();
-						center = glm::lerp(center,center2,0.5f);
+		MagicCamera& CenterFocus(){
+			if(Selected){
+				Upp::Vector<Object3D*>& selectedObj = *(Selected);
+				if(selectedObj.GetCount() > 0){
+					glm::vec3 center = selectedObj[0]->GetBoundingBoxTransformed().GetCenter(); // The crash is occuring here, During copy operator,
+																								//the Append function on vector make things crash
+					if(selectedObj.GetCount() > 1){
+						for(int e = 1; e < selectedObj.GetCount(); e++){
+							glm::vec3 center2 = selectedObj[e]->GetBoundingBoxTransformed().GetCenter();
+							center = glm::lerp(center,center2,0.5f);
+						}
 					}
+					focus = center;
+				}else{
+					focus = glm::vec3(0.0f,0.0f,0.0f);
 				}
-				focus = center;
-			}else{
-				focus = glm::vec3(0.0f,0.0f,0.0f);
 			}
 			return *this;
 		}
