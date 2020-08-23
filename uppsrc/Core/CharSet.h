@@ -85,6 +85,8 @@ int    Utf32Len(const char *s, int len);
 inline int Utf32Len(const char *s)                    { return Utf32Len(s, (int)strlen(s)); }
 inline int Utf32Len(const String& s)                  { return Utf32Len(~s, s.GetCount()); }
 
+dword ReadSurrogatePair(const wchar *s, const wchar *lim);
+
 void          ToUtf32(dword *t, const wchar *s, int len);
 Vector<dword> ToUtf32(const wchar *s, int len);
 inline Vector<dword> ToUtf32(const wchar *s)          { return ToUtf32(s, wstrlen(s)); }
@@ -192,8 +194,6 @@ inline bool IsXDigit(int c)        { return IsDigit(c) || c >= 'A' && c <= 'F' |
 
 bool IsDoubleWidth(int c);
 
-word UnicodeCombine(word chr, word combine);
-
 String Utf8ToAscii(const String& src);
 String Utf8ToUpperAscii(const String& src);
 String Utf8ToLowerAscii(const String& src);
@@ -252,6 +252,8 @@ bool    SaveStreamBOMUtf8(Stream& out, const String& data);
 bool    SaveFileBOMUtf8(const char *path, const String& data);
 
 // Deprecated
+
+word UnicodeCombine(word chr, word combine);
 
 inline bool IsCJKIdeograph(int c)  { return c >= 0x2e80 && c <= 0xdfaf || c >= 0xf900 && c <= 0xfaff; }
 

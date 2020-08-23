@@ -31,7 +31,7 @@ class OpenGLShader{
 		GLenum GetType()const noexcept{return shaderType;}
 		bool IsCompiled()const noexcept{return compiled;}
 };
-class OpenGLProgram{
+	class OpenGLProgram{
 	private:
 		GLuint vertex = 0;
 		GLuint TCS = 0; //Tesselation control shader
@@ -41,6 +41,7 @@ class OpenGLProgram{
 		
 		GLuint ID = 0;
 		bool linked = false;
+		bool copied = false; //if the shader is copied then is deletion wont occure a clear in OpenGL data
 		
 		GLint GetUniformLocation(Upp::String name){
 			GLint location = glGetUniformLocation(ID, name.ToStd().c_str());
@@ -61,16 +62,29 @@ class OpenGLProgram{
 		}
 	public:
 		OpenGLProgram(){}
-		~OpenGLProgram(){if(ID != 0) glDeleteProgram(ID);}
+		OpenGLProgram(const OpenGLProgram& prog){*this = prog;}
+		OpenGLProgram& operator=(const OpenGLProgram& prog)noexcept{
+			vertex = prog.vertex;
+			TCS = prog.TCS;
+			TES = prog.TES;
+			geometry = prog.geometry;
+			fragment = prog.fragment;
+			ID = prog.ID;
+			linked = prog.linked;
+			copied = true;
+			return *this;
+		}
+		
+		~OpenGLProgram(){if(ID != 0 && !copied) glDeleteProgram(ID);}
 		
 		OpenGLProgram& Bind()noexcept{if(linked)glUseProgram(ID);return *this;}
 		OpenGLProgram& UnBind()noexcept{glUseProgram(0);return *this;}
 		
-		bool ContainVertex(){return (linked)? vertex : false;}
-		bool ContainTCS(){return (linked)? TCS : false;}
-		bool ContainTES(){return (linked)? TES : false;}
-		bool ContainGeometry(){return (linked)? geometry : false;}
-		bool ContainFragment(){return (linked)? fragment : false;}
+		bool ContainVertex()const noexcept{return (linked)? vertex : false;}
+		bool ContainTCS()const noexcept{return (linked)? TCS : false;}
+		bool ContainTES()const noexcept{return (linked)? TES : false;}
+		bool ContainGeometry()const noexcept{return (linked)? geometry : false;}
+		bool ContainFragment()const noexcept{return (linked)? fragment : false;}
 		
 		OpenGLProgram& AttachShader(const OpenGLShader& shad)noexcept{
 			if(shad.IsCompiled()){

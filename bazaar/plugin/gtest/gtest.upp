@@ -1,4 +1,4 @@
-description "Google C++ unite test framework\3770,128,128";
+description "Google C++ unit test framework - Version 1.10.0\3770,128,128";
 
 uses
 	Core;
@@ -7,6 +7,7 @@ library(POSIX) pthread;
 
 file
 	Sources readonly separator,
+	gtest-matchers.cc,
 	gtest-death-test.cc,
 	gtest-filepath.cc,
 	gtest-port.cc,
@@ -19,6 +20,7 @@ file
 	gtest-upp.h,
 	gtest-death-test.h,
 	gtest-internal-inl.h,
+	gtest-matchers.h,
 	gtest-message.h,
 	gtest-param-test.h,
 	gtest-printers.h,
@@ -31,13 +33,10 @@ file
 	internal/gtest-death-test-internal.h,
 	internal/gtest-filepath.h,
 	internal/gtest-internal.h,
-	internal/gtest-linked_ptr.h,
-	internal/gtest-param-util-generated.h,
 	internal/gtest-param-util.h,
 	internal/gtest-port-arch.h,
 	internal/gtest-port.h,
 	internal/gtest-string.h,
-	internal/gtest-tuple.h,
 	internal/gtest-type-util.h,
 	"Include - Internal - Custom" readonly separator,
 	internal/custom/gtest.h,

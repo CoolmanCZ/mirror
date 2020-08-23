@@ -3,9 +3,13 @@
 #include <Core/Core.h>
 #include <GLCtrl_glad/GLCtrl_glad.h>
 #include <Surface/Surface.h>
+#include <plugin/assimp/assimp.h>
 #include "Transform.h"
 #include "Shader.h"
 #include "BoundingBox.h"
+
+#include "Mesh.h"
+
 namespace Upp{
 enum DrawType { DT_TRIANGLE, DT_QUAD };
 /*
@@ -31,39 +35,21 @@ struct Light{
 
 
 
-struct Object3DMaterial{
-	private:
-		glm::vec3 Diffuse = glm::vec3(0.30f, 0.30f, 0.30f);
-		glm::vec3 Specular = glm::vec3(0.1f, 0.1f, 0.1f);
-		float Shininess = 12.0f;
-		bool update = true;
-	public:
-		Object3DMaterial(){}
-		Object3DMaterial(const glm::vec3& diffuse_, const glm::vec3& speculare_, float shininess_){Diffuse = diffuse_;Specular = speculare_;Shininess = shininess_;}
-		
-		glm::vec3 GetDiffuse()const noexcept{return Diffuse;}
-		glm::vec3 GetSpecular()const noexcept{return Specular;}
-		float GetShininess()const noexcept{return Shininess;}
-		
-		Object3DMaterial& SetDiffuse(const glm::vec3& diffuse_)noexcept{Diffuse = diffuse_; update = true; return *this;}
-		Object3DMaterial& SetSpecular(const glm::vec3& speculare_)noexcept{Specular = speculare_; update = true; return *this;}
-		Object3DMaterial& SetShininess(float shininess_)noexcept{Shininess = shininess_; update = true; return *this;}
-		
-		bool ShouldBeUpdated()const noexcept{return update;}
-		void HaveBeenUpdated()noexcept{update = false;}
-};
+
+
 class Surface;
 
 class Object3D : public Upp::Moveable<Object3D>{
 	private:
-		GLuint VerticesVBO = 0;
-		GLuint ColorVBO = 0;
-		GLuint NormalVBO = 0;
+		static int GlobalID;
+		int ID;
 		
-		GLuint VAO = 0;
+		Vector<Mesh> meshes;
+		Vector<unsigned int> textures; //Vector carrying all texture of the object, every meshes refer to it via one iterator
 		
-		Object3DMaterial material; //The material object is a representation of material property of the object (it change how light affect it)
-		
+		bool loaded = false;
+		bool moved = false;
+
 		Color lineColor = Black();
 		float lineOpacity = 0.5f;
 		float lineWidth = 1.0f;
@@ -72,8 +58,12 @@ class Object3D : public Upp::Moveable<Object3D>{
 		float normalOpacity = 0.5f;
 		float normalLenght = 1.0f;
 		
-		unsigned int SurfaceCount = 0;
-		VolumeEnvelope *env = nullptr;
+		GLenum drawType = GL_TRIANGLES;
+		
+		OpenGLProgram NoLight; //The program will draw figure without light
+		OpenGLProgram Line; //THe program will draw figure line
+		OpenGLProgram Normal; //The program will draw Normal
+		OpenGLProgram Light; //the program will draw figure with light
 
 		bool showMesh = true;
 		bool showMeshLine = false;
@@ -84,45 +74,53 @@ class Object3D : public Upp::Moveable<Object3D>{
 		bool showBoundingBox = false;
 			
 		Transform transform;
+		Material material; //The material object is a representation of material property of the object (it change how light affect it)
 		
-		GLenum DrawType = GL_TRIANGLES;
+		bool UpdateBuffer(GLuint buffer, int SurfaceCount , int SurfaceNumber,int count , const float * data)noexcept;
+		Vector<float> ReadBuffer(GLuint buffer, int SurfaceCount , int SurfaceNumber,int count)noexcept;
 		
-		bool UpdateBuffer(GLuint buffer, int SurfaceNumber,int count , const float * data)noexcept;
-		Vector<float> ReadBuffer(GLuint buffer, int SurfaceNumber,int count)noexcept;
-		void BuildOpenGLData(Upp::Vector<float>& surface, Upp::Vector<float>& normal, Upp::Vector<float>& color);
-		
+		//Texture loading function
+		//Return Texture indice in openGL data 0 if failled
+		unsigned int LoadTexture(const String& filename);
+		unsigned int LoadEmptyTexture();
+		/*
+			Assimp loading function
+		*/
+		bool InitFromScene(const aiScene* pScene, const String& Filename);
+	    void InitMesh(unsigned int Index, const aiMesh* paiMesh);
+	    bool InitMaterials(const aiScene* pScene, const String& Filename);
 	public:
-		Object3D(){}
-		Object3D(const Object3D& obj){*this = obj;}
-		Object3D(Surface& surface,Upp::Color = Green());
-		Object3D(Upp::Vector<float>& surface, Upp::Vector<float>& normal, Upp::Vector<float>& color);
+		Object3D():ID(GlobalID++){}
+		//move will prevent your object to be deleted (from OpenGL perspective)
+		Object3D(Object3D&& obj):ID(GlobalID++){*this = pick(obj);}
+		Object3D& operator=(Object3D&& obj);
 		
-		Object3D& operator=(const Object3D& obj){
-			VerticesVBO = obj.VerticesVBO;
-			ColorVBO = obj.ColorVBO;
-			NormalVBO = obj.NormalVBO;
-			VAO = obj.VAO;
-			material = obj.material; //The material object is a representation of material property of the object (it change how light affect it)
-			lineColor = obj.lineColor;
-			lineOpacity = obj.lineOpacity;
-			lineWidth = obj.lineWidth;
-			normalColor = obj.normalColor;
-			normalOpacity = obj.normalOpacity;
-			normalLenght = obj.normalLenght;
-			SurfaceCount = obj.SurfaceCount;
-			env =obj.env;
-			showMesh = obj.showMesh;
-			showMeshLine = obj.showMeshLine;
-			showMeshNormal = obj.showMeshNormal;
-			showLight = obj.showLight;
-			boundingBox = obj.boundingBox;
-			showBoundingBox = obj.showBoundingBox;
-			transform = obj.transform;
-			DrawType = obj.DrawType;
-			return *this;
-		}
+		//copy also VBO and VAO , wich mean when object is destroyed , every copy will
+		//lost their 3D representation in OpenGL
+		Object3D(const Object3D& obj):ID(GlobalID++){*this = obj;}
+		Object3D& operator=(const Object3D& obj);
+		~Object3D();
+
+		/**
+			LoadModel load multiple kind of object file using Assimp lib, you can specify some custom
+			load routine by editing pFlags, if pFlags = 0 then SurfaceCtrl default behavior about
+			assimp will be used
+		**/
+		bool LoadModel(const String& FileObj, Color color = Gray(), unsigned int pFlags = 0);
+
+		/*bool LoadObj(const String& FileObj);
+		bool LoadStl(const String& StlFile, Upp::Color = Green());*/
+		bool LoadSurface(Surface& surface, Upp::Color = Green());
+		Surface GetSurface();
 		
-		Object3D& SetDrawType(GLenum dt)noexcept{DrawType = dt; return *this;}
+		int GetID()const {return ID;}
+		
+		const Upp::Vector<Mesh>& GetMeshes() const noexcept{return meshes;}
+		Mesh& CreateMeshes()noexcept{return meshes.Add();}
+
+		bool Load(); //Load all data in graphic memory It's called automaticly by using Load function, but you must call it if you set manually all data
+		Object3D& Unload();
+		
 		Object3D& ShowMesh(bool b = true)noexcept{showMesh = b; return *this;}
 		Object3D& ShowMeshLine(bool b = true)noexcept{showMeshLine = b; return *this;}
 		Object3D& ShowMeshNormal(bool b = true)noexcept{showMeshNormal = b; return *this;}
@@ -135,34 +133,32 @@ class Object3D : public Upp::Moveable<Object3D>{
 		bool GetShowLight()const noexcept{return showLight;}
 		bool GetShowBoundingBox()const noexcept{return showBoundingBox;}
 		
+		Object3D& SetDrawType(GLenum drawtype)noexcept{drawType = drawtype;return *this;}
 		Object3D& SetLineColor(Color color)noexcept{lineColor = color; return *this;}
 		Object3D& SetNormalColor(Color color)noexcept{normalColor = color; return *this;}
 		Object3D& SetLineOpacity(float opacity)noexcept{lineOpacity = opacity; if(lineOpacity < 0) lineOpacity =0; if(lineOpacity> 1.0f) lineOpacity = 1.0f; return *this;}
 		Object3D& SetLineWidth(float width)noexcept{lineWidth = width; if(lineWidth < 1) lineWidth = 1.0f; return *this;}
 		Object3D& SetNormalOpacity(float opacity)noexcept{normalOpacity = opacity; if(normalOpacity < 0) normalOpacity =0; if(normalOpacity> 1.0f) normalOpacity = 1.0f; return *this;}
+		GLenum GetDrawType()const noexcept{return drawType;}
 		Upp::Color GetLineColor()const noexcept{return lineColor;}
 		Upp::Color GetNormalColor()const noexcept{return normalColor;}
 		float GetNormalOpcaity()const noexcept{return normalOpacity;}
 		float GetLineOpcaity()const noexcept{return lineOpacity;}
 		float GetLineWidth()const noexcept{return lineWidth;}
-		GLenum GetDrawType()const noexcept{return DrawType;}
-		
-		Object3DMaterial& GetMaterial(){return material;}
-		
+				
 		Transform& GetTransform()noexcept{return transform;}
-		unsigned int GetNumberOfSurface()noexcept{return SurfaceCount;}
-		GLuint GetVAO()noexcept{return VAO;}
-		unsigned int GetSurfaceCount()noexcept{return SurfaceCount;}
+		const Transform& GetTransform()const noexcept{return transform;}
+				
+		void CreateBoundingBox(); // Create Bounding box
+		void RemoveBoundingBox();
 		
-		VolumeEnvelope* GetVolumeEnvelope(){return env;}
-		Object3D& SetVolumeEnvelope(VolumeEnvelope& envelope){env = &envelope; boundingBox.SetBoundingBox(env->minX,env->minY,env->minZ,env->maxX,env->maxY,env->maxZ); return *this;}
 		BoundingBox& GetBoundingBox(){return boundingBox;}
 		BoundingBox GetBoundingBoxTransformed()const noexcept{
 			BoundingBox box(boundingBox);
 			return box.TransformBy(transform.GetModelMatrix());
 		}
 		
-		bool TestLineIntersection(const glm::vec3 & start, const glm::vec3 & end){
+		bool TestLineIntersection(const glm::vec3 & start, const glm::vec3 & end)const{
 			BoundingBox box  = Upp::pick(GetBoundingBoxTransformed());
 			return box.LineIntersection(start,end);
 		}
@@ -171,27 +167,32 @@ class Object3D : public Upp::Moveable<Object3D>{
 			/!\ True do not mean OpenGL will provide good things, it just mean buffer have been
 			    writted  correctly
 		*/
-		bool UpdateColor(unsigned int SurfaceNumber, int r, int g, int b)noexcept;
-		bool UpdateColor(unsigned int SurfaceNumber, float r, float g, float b)noexcept;
-		bool UpdateColor(unsigned int SurfaceNumber, glm::vec3 color)noexcept;
-		bool UpdateColor(unsigned int SurfaceNumber, Upp::Color color)noexcept;
-		bool UpdateColors(unsigned int SurfaceNumber,int Count, const float * data)noexcept;
+		bool UpdateColor(unsigned int MeshNo, unsigned int SurfaceNumber, int r, int g, int b)noexcept;
+		bool UpdateColor(unsigned int MeshNo, unsigned int SurfaceNumber, float r, float g, float b)noexcept;
+		bool UpdateColor(unsigned int MeshNo, unsigned int SurfaceNumber, glm::vec3 color)noexcept;
+		bool UpdateColor(unsigned int MeshNo, unsigned int SurfaceNumber, Upp::Color color)noexcept;
+		bool UpdateColors(unsigned int MeshNo, unsigned int SurfaceNumber,int Count, const float * data)noexcept;
 		
-		bool UpdateNormal(unsigned int SurfaceNumber, float x, float y, float z)noexcept;
-		bool UpdateNormal(unsigned int SurfaceNumber, glm::vec3 normal)noexcept;
-		bool UpdateNormals(unsigned int SurfaceNumber,int Count, const float * data)noexcept;
+		bool UpdateNormal(unsigned int MeshNo, unsigned int SurfaceNumber, float x, float y, float z)noexcept;
+		bool UpdateNormal(unsigned int MeshNo, unsigned int SurfaceNumber, glm::vec3 normal)noexcept;
+		bool UpdateNormals(unsigned int MeshNo, unsigned int SurfaceNumber,int Count, const float * data)noexcept;
 		
-		bool UpdateVertice(unsigned int SurfaceNumber, float x, float y, float z)noexcept;
-		bool UpdateVertice(unsigned int SurfaceNumber, glm::vec3 vertice)noexcept;
-		bool UpdateVertices(unsigned int SurfaceNumber,int Count, const float * data)noexcept;
+		bool UpdateVertice(unsigned int MeshNo, unsigned int SurfaceNumber, float x, float y, float z)noexcept;
+		bool UpdateVertice(unsigned int MeshNo, unsigned int SurfaceNumber, glm::vec3 vertice)noexcept;
+		bool UpdateVertices(unsigned int MeshNo, unsigned int SurfaceNumber,int Count, const float * data)noexcept;
 		/*
 			Read OpenGL buffer and return data in Upp::Vector
 		*/
-		Vector<float> ReadColors(unsigned int SurfaceNumber, int count)noexcept;
-		Vector<float> ReadNormals(unsigned int SurfaceNumber, int count)noexcept;
-		Vector<float> ReadVertices(unsigned int SurfaceNumber, int count)noexcept;
+		Vector<float> ReadColors(int MeshNo, unsigned int SurfaceNumber, int count);
+		Vector<float> ReadNormals(int MeshNo, unsigned int SurfaceNumber, int count);
+		Vector<float> ReadVertices(int MeshNo, unsigned int SurfaceNumber, int count);
 		
-		void Draw(glm::mat4 projectionMatrix, glm::mat4 viewMatrix, glm::vec3 viewPosition, OpenGLProgram& noLight, OpenGLProgram& light, OpenGLProgram& line,OpenGLProgram& normal)noexcept;
+		Object3D& SetProgramNoLight(const OpenGLProgram& program)noexcept{NoLight = program; return *this;}
+		Object3D& SetProgramLight(const OpenGLProgram& program)noexcept{Light = program; return *this;}
+		Object3D& SetProgramLine(const OpenGLProgram& program)noexcept{Line = program; return *this;}
+		Object3D& SetProgramNormal(const OpenGLProgram& program)noexcept{Normal = program; return *this;}
+		
+		void Draw(glm::mat4 projectionMatrix, glm::mat4 viewMatrix, glm::vec3 viewPosition)noexcept;
 };
 	
 }

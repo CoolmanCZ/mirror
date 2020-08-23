@@ -1,5 +1,5 @@
-#ifndef _UltimateOpenGL_Camera_h_
-#define _UltimateOpenGL_Camera_h_
+#ifndef _UltimateOpenGL_UOGL_Camera_h_
+#define _UltimateOpenGL_UOGL_Camera_h_
 #include "Transform.h"
 
 /*
@@ -55,6 +55,7 @@ class UOGL_Camera{
 
 		UOGL_Camera& SetTransform(Transform& value)noexcept{transform = value;return *this;}
 		Transform& GetTransform()noexcept{return transform;}
+		const Transform& GetTransform()const noexcept{return transform;}
 		
 		UOGL_Camera& SetCameraType(CameraType value)noexcept{type = value;  return *this;}
 		CameraType GetCameraType()const noexcept{return type;}
@@ -143,6 +144,7 @@ class UOGL_Camera{
 		UOGL_Camera& SetMouvementSpeed(float value)noexcept{MouvementSpeed = value;return *this;}
 		UOGL_Camera& SetMouseSensitivity(float value)noexcept{MouseSensitivity = value;return *this;}
 		UOGL_Camera& SetZoomSpeed(float value = 10.0f)noexcept{ZoomSpeed = value; return *this;}
+		
 		float GetMouvementSpeed()const noexcept{return MouvementSpeed;}
 		float GetMouseSensitivity()const noexcept{return MouseSensitivity;}
 		float GetZoomSpeed()const noexcept{return ZoomSpeed;}

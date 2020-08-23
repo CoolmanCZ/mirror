@@ -8,6 +8,5 @@ file
 	DemoTest.cpp;
 
 mainconfig
-	"" = "TEST",
 	"" = "";
 

@@ -9,16 +9,16 @@ const String CAR_REGISTRATION_NUMBER = "UPP IS THE BEST";
 
 class Car {
 public:
-	virtual ~Car() {}
+	virtual ~Car() = default;
 	
 	virtual void OpenHood() = 0;
-	virtual String ReadRegistrationNumbers() = 0;
+	virtual String ReadRegistrationNumbers() const = 0;
 };
 
-class MockCar : public Car {
+class MockCar final : public Car {
 public:
-	MOCK_METHOD0(OpenHood, void());
-	MOCK_METHOD0(ReadRegistrationNumbers, String());
+	MOCK_METHOD(void, OpenHood, (), (override));
+	MOCK_METHOD(String, ReadRegistrationNumbers, (), (const, override));
 };
 
 class CarRepairShop final {
