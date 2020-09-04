@@ -9,7 +9,7 @@ glm::mat4 MagicCamera::GetProjectionMatrix()const noexcept{
 		return glm::ortho(-distance ,distance ,-distanceY ,distanceY, 0.00001f, 10000.0f);
 	}else{
 		LOG("Swaping to Camera Perspective (cause of unknow type)");
-		return glm::perspective(glm::radians(GetFOV()),(float)( ScreenSize.cx / ScreenSize.cy),GetDrawDistanceMin(),GetDrawDisanceMax());//We calculate Projection here since multiple camera can have different FOV
+		return glm::perspective(glm::radians(GetFOV()),(float)( ScreenSize.cx / ScreenSize.cy),(-GetDrawDisanceMax())*10.0f,(GetDrawDisanceMax())*10.0f);//We calculate Projection here since multiple camera can have different FOV
 	}
 }
 glm::mat4 MagicCamera::GetViewMatrix()const noexcept{
@@ -36,41 +36,44 @@ MagicCamera& MagicCamera::MouseWheelMouvement(float xoffset,float yoffset)noexce
 			
 			float a1 = xoffset * -1.0f;
 			float a2 = yoffset * -1.0f;
-			glm::vec3 axis = focus;
 			
 			glm::vec3 pos = focus - transform.GetPosition();
 			float angle = glm::dot(glm::normalize(transform.GetFront()),glm::normalize(pos));
 			
-	//		float distance = glm::distance(focus,transform.GetPosition());
-			if(angle < 0.90f){
-				if (angle  < 0){
-					focus = glm::vec3(0.0f,0.0f,0.0f);
-				}
-				axis =  transform.GetPosition() + (transform.GetFront()*10.0f);
-			}
-	//		if(distance > 70) transform.SetPosition(transform.GetPosition() *0.999f);
+			glm::vec3 between;
 			
-			glm::vec3 between = transform.GetPosition() - axis;
+			if(type == CT_ORTHOGRAPHIC){
+				between =  transform.GetPosition();
+				focus = glm::vec3(0.0f,0.0f,0.0f);
+			}else{
+				if(angle < 0.90f){
+					if (angle  < 0){
+						focus = glm::vec3(0.0f,0.0f,0.0f);
+					}
+					focus =  transform.GetPosition() + (transform.GetFront()*10.0f);
+				}
+				between = transform.GetPosition() - focus;
+			}
+			
 			glm::quat upRotation = Transform::GetQuaterion(a1,transform.GetWorldUp());
 			glm::quat rightRotation = Transform::GetQuaterion(a2, transform.GetRight());
-			//glm::quat rightRotation = Transform::GetQuaterion(a2,glm::normalize(glm::cross(transform.GetUp(),v)));
 			
 			between = glm::rotate(upRotation, between);
 			between = glm::rotate(rightRotation, between);
 			
-			transform.SetPosition(axis + between);
+			transform.SetPosition(focus + between);
 			transform.Rotate(glm::inverse(upRotation * rightRotation));
+			
 			return *this;
 		}
 
 MagicCamera& MagicCamera::ProcessMouseScroll(float zdelta)noexcept{
-	
-	//Must call DetermineRotationPoint before 
-	float xoffset = (lastPress.x - (ScreenSize.cx/2)) * 0.005f;
-	float yoffset = (lastPress.y) * 0.005f * -1.0;
-	float Upoffset = (lastPress.y - (ScreenSize.cy/2)) * 0.005f;
+	//Must call DetermineRotationPoint before
+	float xoffset = (lastPress.x - (ScreenSize.cx/2.0f)) * 0.005f;
+	float yoffset = (lastPress.y) * 0.005f * -1.0f;
+	float Upoffset = (lastPress.y - (ScreenSize.cy/2.0f)) * 0.005f;
 	bool doX = false, doY = false;
-	if(!(type == CT_ORTHOGRAPHIC) && !OnObject){
+	if(!OnObject){
 		/*if(sqrt(pow( StartPress.x - (ScreenSize.cx/2),2)) > (ScreenSize.cx/20)) doX = true;
 		if(sqrt(pow( StartPress.y - (ScreenSize.cy/2),2)) > (ScreenSize.cy/20)) doY = true;*/
 		doX = true;
@@ -130,18 +133,71 @@ int MagicCamera::Pick(float x, float y,const Upp::Vector<Object3D>& allObjects)c
     }
 	return intersect;
 }
+bool MagicCamera::PickFocus(float x, float y){
+	int intersect = -1;
+	double distance = 100000.0f;
+	glm::vec3 start = UnProject2(x,y,0.0f);
+	glm::vec3 end = UnProject2(x,y,1.0f);
+	
+	glm::vec3 focusMin = focus - 0.5f;
+	glm::vec3 focusMax = focus + 0.5f;
+	
+	glm::vec3 center     = (focusMin + focusMax) * 0.5f;
+    glm::vec3 extents    = focusMax - focus;
+    glm::vec3 lineDir    = 0.5f * (end - start);
+    glm::vec3 lineCenter = start + lineDir;
+    glm::vec3 dir        = lineCenter - center;
 
-MagicCamera& MagicCamera::DetermineRotationPoint(Point& p,const Upp::Vector<Object3D>& allObjects)noexcept{
-	int obj = Pick(p.x,p.y,allObjects);
-	if(obj != -1){
-		for(const Object3D& o : allObjects){
-			if(o.GetID() == obj){
-				focus = o.GetBoundingBoxTransformed().GetCenter();
+    float ld0 = abs(lineDir.x);
+    if (abs(dir.x) > (extents.x + ld0))
+        return false;
+
+    float ld1 = abs(lineDir.y);
+    if (abs(dir.y) > (extents.y + ld1))
+        return false;
+
+    float ld2 = abs(lineDir.z);
+    if (abs(dir.z) > (extents.z + ld2))
+        return false;
+
+    glm::vec3 vCross = glm::cross(lineDir, dir);
+    if (abs(vCross.x) > (extents.y * ld2 + extents.z * ld1))
+        return false;
+
+    if (abs(vCross.y) > (extents.x * ld2 + extents.y * ld0))
+        return false;
+   
+    if (abs(vCross.z) > (extents.x * ld1 + extents.y * ld0))
+        return false;
+
+    return true;
+}
+
+
+MagicCamera& MagicCamera::DetermineRotationPoint(Point& p,const Upp::Vector<Object3D>& allObjects, const Upp::Vector<int>& allSelecteds)noexcept{
+	if(allSelecteds.GetCount() == 0){
+		int obj = Pick(p.x,p.y,allObjects);
+		if(obj != -1){
+			for(const Object3D& o : allObjects){
+				if(o.GetID() == obj){
+					focus = o.GetBoundingBoxTransformed().GetCenter();
+					OnObject = true;
+				}
+			}
+		}else{
+			if(PickFocus(p.x,p.y)){
 				OnObject = true;
+			}else{
+				OnObject = false;
+				glm::vec3 pos = focus - transform.GetPosition();
+				float angle = glm::dot(glm::normalize(transform.GetFront()),glm::normalize(pos));
+				if(angle > 0.95f){
+					focus = glm::vec3(0.0f,0.0f,0.0f);
+				}
 			}
 		}
 	}else{
-		OnObject = false;
+		OnObject = true;
 	}
 	return *this;
 }

@@ -1,15 +1,17 @@
 uses
 	CtrlLib,
-	SurfaceCtrl;
+	SurfaceCtrl,
+	Functions4U;
 
 file
-	main.cpp,
 	SurfaceCtrl_Demo.h,
-	SurfaceCtrl_Demo.lay;
+	SurfaceCtrl_Demo.lay,
+	main.cpp;
 
 mainconfig
-	"" = "GUI",
-	"" = "",
 	"" = "USEMALLOC",
-	"" = "USEMALLOC GUI";
+	"" = "USEMALLOC GUI",
+	"" = "GUI SKYBOX",
+	"" = "USEMALLOC GUI SKYBOX",
+	"" = "GUI";
 

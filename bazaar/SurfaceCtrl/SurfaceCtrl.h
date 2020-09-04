@@ -1,30 +1,12 @@
 #ifndef _UOGLCtrl_UOGLCtrl_h_
 #define _UOGLCtrl_UOGLCtrl_h_
-#include <CtrlLib/CtrlLib.h>
-#include <GLCtrl_glad/GLCtrl_glad.h>
-#include <Surface/Surface.h>
-
-#define GLM_ENABLE_EXPERIMENTAL
-#include <plugin/glm/glm.hpp>
-#include <plugin/glm/gtc/matrix_transform.hpp>
-#include <plugin/glm/gtc/type_ptr.hpp>
-#include <plugin/glm/gtx/quaternion.hpp>
-#include <plugin/glm/ext/quaternion_trigonometric.hpp>
-#include <plugin/glm/gtc/constants.hpp>
-#include <plugin/glm/gtx/norm.hpp>
-#include <plugin/glm/gtx/string_cast.hpp>
-
-#define STRINGIFY(...) #__VA_ARGS__
-#define SHADER(version, shader) "#version " #version "\n" STRINGIFY(shader)
-
-#include "Object3D.h"
-#include "Shader.h"
-#include "MagicCamera.h"
+#include "Definition.h"
 #include "Object3DProvider.h"
+#include "Object3D.h"
+#include "MagicCamera.h"
 
 namespace Upp{
-	
-class SurfaceCtrl : public GLCtrl_glad{
+class SurfaceCtrl : public GL{
 	private:
 		bool loaded = false;
 		Object3DProvider objProvider;
@@ -34,6 +16,7 @@ class SurfaceCtrl : public GLCtrl_glad{
 		
 		Object3D Axis;
 		Object3D CameraFocus;
+		Skybox skybox;
 
 		MagicCamera camera;
 				
@@ -43,7 +26,7 @@ class SurfaceCtrl : public GLCtrl_glad{
 		OpenGLProgram DrawMeshNormal;
 		
 		bool showAxis = true;
-		bool ShowCameraFocus = false;
+		bool showCameraFocus = false;
 		
 		float sizeW = 800.0f;
 		float sizeH = 600.0f;
@@ -57,19 +40,17 @@ class SurfaceCtrl : public GLCtrl_glad{
 		bool fastMode = false;
 
 		void InitShader(); //Load default shader
-		
-		
 	public:
 		SurfaceCtrl();
 		~SurfaceCtrl();
 		
-		Function <void()> OnBegin;
+		Function <void()> WhenBegin;
 		Function <void()> WhenPaint;
-		Function <void()> OnEnd;
+		Function <void()> WhenEnd;
 		
 		//Starting function
+		void Init()noexcept;
 		void InitCamera()noexcept;
-		void InitOpenGLFeatures()noexcept;
 
 		//Action on all objects vector
 		const Upp::Vector<Object3D>& GetAllObjects()const noexcept{return allObjects;}
@@ -82,12 +63,15 @@ class SurfaceCtrl : public GLCtrl_glad{
 		void DrawAllObjects()noexcept; //Draw all object
 
 		//Change selected object vector
-		const Upp::Vector<int>& GetSelectedObject()const noexcept; //return const vector representing all selected Object
+		const Upp::Vector<int>& GetSelectedObject()const noexcept{return allSelected;} //return const vector representing all selected Object
 		void AddSelectedObject(int ID)noexcept;
 		void UpdateSelectedObjectViaMouse(Point& p, dword keyflags)noexcept; //Process work on selected object depending on keyflags and point
 		glm::vec3 GetCenterPoint()const noexcept; //Return center point between all selected item
 		void RemoveSelectedObject(int ID)noexcept;
 		void ClearSelectedObject()noexcept;
+		
+		//Skybox Getter
+		Skybox& GetSkybox()noexcept{return skybox;}
 		
 		//Change Object selected
 		void MoveAllSelectedObjects(glm::vec3 move)noexcept; //Move all selected object
@@ -116,7 +100,12 @@ class SurfaceCtrl : public GLCtrl_glad{
 		SurfaceCtrl& ShowAxis(bool b = true)noexcept{showAxis = b; return *this;}
 		bool IsAxisEnable()const noexcept{return showAxis;}
 		
+		//Focus option
+		SurfaceCtrl& ShowCameraFocus(bool b = true)noexcept{showCameraFocus = b; return *this;}
+		bool IsCameraFocusShow()const noexcept{return showCameraFocus;}
+		
 		//Application event
+		virtual void Layout(){GLResize(GetSize().cx,GetSize().cy);}
 		virtual void GLPaint(); //paint function
 		virtual void GLResize(int w, int h); //Action on resize
 		
@@ -130,5 +119,6 @@ class SurfaceCtrl : public GLCtrl_glad{
 		virtual void MouseLeave(); //action when mouse leave
 		virtual bool Key(dword key,int count); //Action when key press
 };
+#include "Object3D.h"
 }
 #endif

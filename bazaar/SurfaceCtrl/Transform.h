@@ -1,16 +1,6 @@
 #ifndef _UltimateOpenGL_Transform_h_
 #define _UltimateOpenGL_Transform_h_
-#include <Core/Core.h>
-#define GLM_ENABLE_EXPERIMENTAL
-#include <plugin/glm/glm.hpp>
-#include <plugin/glm/gtc/matrix_transform.hpp>
-#include <plugin/glm/gtc/type_ptr.hpp>
-#include <plugin/glm/gtx/quaternion.hpp>
-#include <plugin/glm/ext/quaternion_trigonometric.hpp>
-#include <plugin/glm/gtx/norm.hpp>
-#include <plugin/glm/gtx/string_cast.hpp>
-#include <plugin/glm/gtx/matrix_decompose.hpp>
-#include <plugin/glm/gtx/compatibility.hpp>
+#include "Definition.h"
 /*
 	Transform Object from UltimateOpenGL
 */
@@ -106,6 +96,10 @@ class Transform{
 			return glm::quat(cosVal,xVal, yVal, zVal);
 		}
 		
+		static glm::vec3 GetEulerAngle(const glm::quat& quaterion){
+			return glm::eulerAngles(quaterion);
+		}
+				
 		static glm::vec3 TransformVectorByMatrix(const glm::vec3& vector,const glm::mat4& matrix){
 			float w = vector[0]* matrix[0][3] + vector[1] * matrix[1][3] + vector[2] * matrix[2][3] + matrix[3][3];
 			glm::vec3 ret;

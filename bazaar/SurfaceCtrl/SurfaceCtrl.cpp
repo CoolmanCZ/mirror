@@ -1,15 +1,35 @@
 #include "SurfaceCtrl.h"
-
 namespace Upp{
 SurfaceCtrl::SurfaceCtrl(){
-	InitCamera();
-	GLResize(600,800);
-	OnBegin = [&]{InitOpenGLFeatures();};
-	
+	WhenBegin = [&]{};
 }
 SurfaceCtrl::~SurfaceCtrl(){
-	OnEnd();
+	WhenEnd();
 }
+
+void SurfaceCtrl::Init()noexcept{
+	ExecuteGL([&]{
+		glEnable(GL_DEPTH_TEST);
+	    glEnable(GL_MULTISAMPLE);
+		glEnable(GL_BLEND);//Gestion of alpha
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); //Gestion de l'alpha sur les textures
+		glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO); //Gestion pour le RGB uniquement
+		InitShader();
+		
+		Axis = objProvider.Begin(GL_LINES).CreateAxis(20000).End();
+		SetDefaultShader(Axis);
+		CameraFocus = objProvider.Begin(GL_TRIANGLE_FAN).AddCube(0.0f,0.0f,0.0f,1,LtYellow()).End();
+		SetDefaultShader(CameraFocus);
+		
+		#ifdef flagSKYBOX
+			skybox.Init();
+		#endif
+		
+		WhenBegin();
+		loaded = true;
+	});
+}
+
 void SurfaceCtrl::InitShader(){
 	DrawMeshNoLight.AttachShader(OpenGLShader(GL_VERTEX_SHADER,
 		#include "shaders/VertexSimple.glsl"
@@ -46,17 +66,10 @@ void SurfaceCtrl::InitCamera()noexcept{
 	camera.SetMouseSensitivity(0.2f);
 	camera.SetMouvementSpeed(0.09f);
 }
-void SurfaceCtrl::InitOpenGLFeatures()noexcept{
-	glEnable(GL_DEPTH_TEST);
-    glEnable(GL_MULTISAMPLE);
-	glEnable(GL_BLEND);//Gestion of alpha
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); //Gestion de l'alpha sur les textures
-	glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO); //Gestion pour le RGB uniquement
-	InitShader();
-}
+
 //Action on all objects vector
 Object3D& SurfaceCtrl::CreateObject()noexcept{
-	return allObjects.Create();
+	return allObjects.Add();
 }
 
 int SurfaceCtrl::FindObject(int ID)const noexcept{
@@ -69,7 +82,7 @@ int SurfaceCtrl::FindObject(int ID)const noexcept{
 	return -1;
 }
 Object3D& SurfaceCtrl::GetObject(int ID)noexcept{
-	ASSERT_(FindObject(ID) != -1, "Invalide Object ID");
+	ASSERT_(FindObject(ID) != -1, "Invalide Object ID: " + AsString(ID));
 	return allObjects[FindObject(ID)];
 }
 
@@ -233,37 +246,42 @@ double SurfaceCtrl::GetDeltaTime()noexcept{
 
 //Application event
 void SurfaceCtrl::GLPaint(){
-	if(!loaded){
-		OnBegin();
-		Axis = objProvider.Begin(GL_LINES).CreateAxis(20000).End();
-		SetDefaultShader(Axis);
-		CameraFocus = objProvider.Begin(GL_TRIANGLE_FAN).AddCube(0.0f,0.0f,0.0f,1,LtYellow()).End();
-		SetDefaultShader(CameraFocus);
-		loaded = true;
+	ONCELOCK{
+		Layout();
+		Init(); //Load axis, focus point, skybox, etc...
+		InitCamera();
 	}
 	if(TimerStarted)ProcessTime();
 	MemoryIgnoreLeaksBlock __;
 	
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	
 	WhenPaint(); //The function wich loop arround all object and draw using proper VAO and shaders
-	
 	if(showAxis)
 		Axis.Draw(camera.GetProjectionMatrix(), camera.GetViewMatrix(),camera.GetTransform().GetPosition());
-	if(ShowCameraFocus){
-		if(allObjects.GetCount() > 0){
-			CameraFocus.GetTransform().SetPosition(camera.GetFocus());
-			CameraFocus.Draw(camera.GetProjectionMatrix(), camera.GetViewMatrix(),camera.GetTransform().GetPosition());
-		}
+	if(showCameraFocus){
+		CameraFocus.GetTransform().SetPosition(camera.GetFocus());
+		CameraFocus.Draw(camera.GetProjectionMatrix(), camera.GetViewMatrix(),camera.GetTransform().GetPosition());
 	}
+	
+	//Draw skybox :
+	glm::mat4 proj;
+	if(camera.GetCameraType() == CT_ORTHOGRAPHIC){
+		camera.SetCameraType(CT_PERSPECTIVE);
+		proj = camera.GetProjectionMatrix();
+		camera.SetCameraType(CT_ORTHOGRAPHIC);
+	}else{
+		proj = camera.GetProjectionMatrix();
+	}
+	skybox.Draw( proj , camera.GetViewMatrix());
+	//***
+	
 	if(fastMode) Refresh();
 }
 void SurfaceCtrl::GLResize(int w, int h){
-	sizeW = w;
-	sizeH = h;
-	HSizePos(GetRect().TopLeft().x, w - GetRect().BottomRight().x).VSizePos(GetRect().TopLeft().y, h - GetRect().BottomRight().y);
-	glViewport(0, 0, (GLsizei)w, (GLsizei)h);
-	camera.SetScreenSize(w,h);
+	if(w != 0)sizeW = w;
+	if(h != 0)sizeH = h;
+	glViewport(0, 0, sizeW, sizeH);
+	camera.SetScreenSize(sizeW, sizeH);
 	if(!fastMode)Refresh();
 }
 
@@ -286,11 +304,10 @@ void SurfaceCtrl::MouseMove(Point p, dword keyflags){
 		if(!fastMode) Refresh();
 	}
 	camera.lastPress = p;
-	
 }
 
 void SurfaceCtrl::MouseWheel(Point p,int zdelta,dword keyflags){
-	camera.DetermineRotationPoint(p,allObjects);
+	camera.DetermineRotationPoint(p,allObjects,allSelected);
 	camera.ProcessMouseScroll(zdelta);
 	if(!fastMode) Refresh();
 }
@@ -308,7 +325,7 @@ void SurfaceCtrl::MiddleDown(Point p, dword keyflags){
 	SetFocus();
 	camera.MouseMiddlePressed = true;
 	camera.lastPress = p;
-	camera.DetermineRotationPoint(p,allObjects);
+	camera.DetermineRotationPoint(p,allObjects,allSelected);
 }
 void SurfaceCtrl::MiddleUp(Point p, dword keyflags){
 	camera.MouseMiddlePressed = false;
@@ -320,9 +337,18 @@ void SurfaceCtrl::MouseLeave(){
 	return;
 }
 bool SurfaceCtrl::Key(dword key,int count){
-	if( key == K_R){
-		float data[] = { 230.0f/255.0f, 140.0f/255.0f, 30.0f/255.0f};
+	
+	/*if( key == K_R){
+		float data[] = { 230.0f/255.0f, 140.0f/255.0f, 30.0f/255.0f, 0.5f};
 		if(allObjects.GetCount() > 0 && allObjects[0].GetMeshes().GetCount() > 0) allObjects[0].UpdateColors(0,0,(allObjects[0].GetMeshes()[0].GetVertices().GetCount()/3)/2,data);
+	}*/
+	if( key == K_R){
+		for(int id : allSelected){
+			int iterator = FindObject(id);
+			if(iterator != -1){
+				DUMP(allObjects[iterator].ReadColors(0,0,50));
+			}
+		}
 	}
 	if( key == K_DELETE){
 		DeleteAllSelectedObjects();
@@ -359,33 +385,8 @@ bool SurfaceCtrl::Key(dword key,int count){
 			}
 		}
 	}
-	if(key == K_ADD){
-		camera.SetFOV(camera.GetFOV() + 5);
-	}
-	if(key == K_SUBTRACT){
-		camera.SetFOV(camera.GetFOV() - 5);
-	}
-	
-	if(key == K_C){
-		static unsigned short e = 1;
-		camera.SetCameraType((CameraType)e);
-		e++;if(e == 2) e = 0;
-	}
-	
 	if(key == K_A){
 		showAxis = !showAxis;
-	}
-	if(key == K_F){
-		ShowCameraFocus = !ShowCameraFocus;
-	}
-	
-	if(key == K_X){
-		Cout() << "Current camera Position : " << camera.GetTransform().GetPosition().x << "," << camera.GetTransform().GetPosition().y << "," << camera.GetTransform().GetPosition().z << EOL;
-	//	Cout() << "Current dezoom factor : " << camera.GetDezoomFactor() << EOL;
-		Cout() << "Current quaterion : " << camera.GetTransform().GetRotation().w << "," << camera.GetTransform().GetRotation().x << "," << camera.GetTransform().GetRotation().y << "," << camera.GetTransform().GetRotation().z << EOL;
-		Cout() << "Up vector : "<< camera.GetTransform().GetUp().x << "," << camera.GetTransform().GetUp().y << "," << camera.GetTransform().GetUp().z << EOL;
-		Cout() << "Right vector : "<< camera.GetTransform().GetRight().x << "," << camera.GetTransform().GetRight().y << "," << camera.GetTransform().GetRight().z << EOL;
-		Cout() << "Front vector : "<< camera.GetTransform().GetFront().x << "," << camera.GetTransform().GetFront().y << "," << camera.GetTransform().GetFront().z << EOL;
 	}
 	if(key == K_ESCAPE){ //removing all selection
 		ClearSelectedObject();
