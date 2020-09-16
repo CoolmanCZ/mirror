@@ -1,4 +1,10 @@
 #include "SurfaceCtrl.h"
+#include <plugin/jpg/jpg.h>
+#include <PdfDraw/PdfDraw.h>
+#define IMAGECLASS SurfaceCtrlImg
+#define IMAGEFILE <SurfaceCtrl/SurfaceCtrl.iml>
+#include <Draw/iml.h>
+
 namespace Upp{
 SurfaceCtrl::SurfaceCtrl(){
 	WhenBegin = [&]{};
@@ -20,11 +26,7 @@ void SurfaceCtrl::Init()noexcept{
 		SetDefaultShader(Axis);
 		CameraFocus = objProvider.Begin(GL_TRIANGLE_FAN).AddCube(0.0f,0.0f,0.0f,1,LtYellow()).End();
 		SetDefaultShader(CameraFocus);
-		
-		#ifdef flagSKYBOX
-			skybox.Init();
-		#endif
-		
+				
 		WhenBegin();
 		loaded = true;
 	});
@@ -58,6 +60,32 @@ void SurfaceCtrl::InitShader(){
 	)).AttachShader(OpenGLShader(GL_FRAGMENT_SHADER,
 		#include "shaders/FragmentBlack.glsl"
 	)).Link();
+}
+
+void SurfaceCtrl::ZoomToFit(){
+	float mi = FLT_MAX;
+	float ma = FLT_MIN;
+	glm::vec3 center(0.0f,0.1f,0.0f);
+	int cpt = 0;
+	for(Object3D& obj : allObjects){
+		BoundingBox b =  obj.GetBoundingBoxTransformed();
+		mi = min(mi , min(min(b.GetMin().x,b.GetMin().y),b.GetMin().z));
+		ma = max(ma , max(max(b.GetMax().x,b.GetMax().y),b.GetMax().z));
+		if(cpt == 0)
+			center = b.GetCenter();
+		else
+			center = glm::lerp(center,b.GetCenter(),0.5f);
+		cpt++;
+	}
+	
+	camera.LookAt(center);
+	if(allObjects.GetCount()){
+		float size = ma-mi * 1.5f ;
+		glm::vec3 newPos = camera.GetTransform().GetFront() * -size;
+		newPos.y = glm::abs(newPos.y);
+		camera.GetTransform().SetPosition(newPos);
+		camera.LookAt(center);
+	}
 }
 
 //Starting function
@@ -131,7 +159,7 @@ void SurfaceCtrl::AddSelectedObject(int ID)noexcept{
 }
 void SurfaceCtrl::UpdateSelectedObjectViaMouse(Point& p, dword keyflags)noexcept{
 	bool ShiftPress = keyflags & K_SHIFT;
-	int ID = camera.Pick(p.x,p.y,allObjects);
+	int ID = camera.Pick(float(p.x), float(p.y), allObjects);
 	if(ID != -1){
 		if(!ShiftPress){
 			ClearSelectedObject();
@@ -190,7 +218,9 @@ void SurfaceCtrl::MoveAllSelectedObjects(glm::vec3 move)noexcept{ //Move all sel
 		int id = allSelected[e];
 		int iterator = FindObject(id);
 		if(iterator != -1){
-			allObjects[iterator].GetTransform().Move(move);
+		//	float length =  glm::length(camera.GetTransform().GetPosition() - allObjects[iterator].GetTransform().GetPosition());
+			//Cout()  << length << EOL;
+			allObjects[iterator].GetTransform().Move(move  );
 		}
 	}
 }
@@ -256,13 +286,15 @@ void SurfaceCtrl::GLPaint(){
 	
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	WhenPaint(); //The function wich loop arround all object and draw using proper VAO and shaders
-	if(showAxis)
+	if(showAxis){
+		if(depthAxis)glDepthFunc(GL_ALWAYS);  // change depth function so depth test always passes
 		Axis.Draw(camera.GetProjectionMatrix(), camera.GetViewMatrix(),camera.GetTransform().GetPosition());
+		if(depthAxis)glDepthFunc(GL_LESS);  // change depth function so depth test passes when values are equal to depth buffer's content
+	}
 	if(showCameraFocus){
 		CameraFocus.GetTransform().SetPosition(camera.GetFocus());
 		CameraFocus.Draw(camera.GetProjectionMatrix(), camera.GetViewMatrix(),camera.GetTransform().GetPosition());
 	}
-	
 	//Draw skybox :
 	glm::mat4 proj;
 	if(camera.GetCameraType() == CT_ORTHOGRAPHIC){
@@ -272,135 +304,226 @@ void SurfaceCtrl::GLPaint(){
 	}else{
 		proj = camera.GetProjectionMatrix();
 	}
-	skybox.Draw( proj , camera.GetViewMatrix());
-	//***
-	
+	skybox.Draw(proj , camera.GetViewMatrix());
 	if(fastMode) Refresh();
 }
 void SurfaceCtrl::GLResize(int w, int h){
-	if(w != 0)sizeW = w;
-	if(h != 0)sizeH = h;
-	glViewport(0, 0, sizeW, sizeH);
+	if(w != 0)sizeW = float(w);
+	if(h != 0)sizeH = float(h);
+	glViewport(0, 0, int(sizeW), int(sizeH));
 	camera.SetScreenSize(sizeW, sizeH);
 	if(!fastMode)Refresh();
 }
 
 //Input event
-void SurfaceCtrl::MouseMove(Point p, dword keyflags){
-	camera.ShiftPressed = keyflags & K_SHIFT;
-	
-	float XOffset = p.x - camera.lastPress.x;
-	float YOffset = p.y - camera.lastPress.y;
-	if(camera.MouseMiddlePressed){
-		if(camera.ShiftPressed)
-			camera.ProcessMouseWheelTranslation(XOffset,YOffset);
-		else
-			camera.MouseWheelMouvement(XOffset,YOffset);
-		if(!fastMode) Refresh();
-	}else if(camera.MouseLeftPressed){
-		glm::vec3 x = GetCamera().GetTransform().GetRight() * (XOffset * GetCamera().GetMouvementSpeed());
-		glm::vec3 y = GetCamera().GetTransform().GetUp() * ((YOffset * -1.0f) * GetCamera().GetMouvementSpeed());
-		MoveAllSelectedObjects(x + y);
-		if(!fastMode) Refresh();
-	}
-	camera.lastPress = p;
-}
-
-void SurfaceCtrl::MouseWheel(Point p,int zdelta,dword keyflags){
-	camera.DetermineRotationPoint(p,allObjects,allSelected);
-	camera.ProcessMouseScroll(zdelta);
-	if(!fastMode) Refresh();
-}
-void SurfaceCtrl::LeftDown(Point p, dword keyflags){
-	SetFocus();
-	camera.lastPress = p;
-	camera.MouseLeftPressed = true;
-	UpdateSelectedObjectViaMouse(p,keyflags);
-	if(!fastMode)Refresh();
-}
-void SurfaceCtrl::LeftUp(Point p, dword keyflags){
-	camera.MouseLeftPressed = false;
-}
-void SurfaceCtrl::MiddleDown(Point p, dword keyflags){
-	SetFocus();
-	camera.MouseMiddlePressed = true;
-	camera.lastPress = p;
-	camera.DetermineRotationPoint(p,allObjects,allSelected);
-}
-void SurfaceCtrl::MiddleUp(Point p, dword keyflags){
-	camera.MouseMiddlePressed = false;
-	camera.ShiftPressed = false;
-}
-void SurfaceCtrl::MouseLeave(){
-	camera.MouseMiddlePressed = false;
-	camera.MouseLeftPressed = false;
-	return;
-}
 bool SurfaceCtrl::Key(dword key,int count){
-	
-	/*if( key == K_R){
-		float data[] = { 230.0f/255.0f, 140.0f/255.0f, 30.0f/255.0f, 0.5f};
-		if(allObjects.GetCount() > 0 && allObjects[0].GetMeshes().GetCount() > 0) allObjects[0].UpdateColors(0,0,(allObjects[0].GetMeshes()[0].GetVertices().GetCount()/3)/2,data);
-	}*/
-	if( key == K_R){
-		for(int id : allSelected){
-			int iterator = FindObject(id);
-			if(iterator != -1){
-				DUMP(allObjects[iterator].ReadColors(0,0,50));
-			}
-		}
-	}
 	if( key == K_DELETE){
 		DeleteAllSelectedObjects();
-	}
-	if( key == K_L){
-		for(int id : allSelected){
-			int iterator = FindObject(id);
-			if(iterator != -1){
-				allObjects[iterator].ShowMeshLine(!allObjects[iterator].GetShowMeshLine());
-			}
-		}
-	}
-	if( key == K_M){
-		for(int id : allSelected){
-			int iterator = FindObject(id);
-			if(iterator != -1){
-				allObjects[iterator].ShowMesh(!allObjects[iterator].GetShowMesh());
-			}
-		}
-	}
-	if( key == K_P){
-		for(int id : allSelected){
-			int iterator = FindObject(id);
-			if(iterator != -1){
-				allObjects[iterator].ShowLight(!allObjects[iterator].GetShowLight());
-			}
-		}
-	}
-	if( key == K_N){
-		for(int id : allSelected){
-			int iterator = FindObject(id);
-			if(iterator != -1){
-				allObjects[iterator].ShowMeshNormal(!allObjects[iterator].GetShowMeshNormal());
-			}
-		}
-	}
-	if(key == K_A){
-		showAxis = !showAxis;
-	}
-	if(key == K_ESCAPE){ //removing all selection
+	} else if(key == K_ESCAPE){ //removing all selection
 		ClearSelectedObject();
 		camera.SetFocus(glm::vec3(0.0f,0.0f,0.0f));
-	}
-	
-	if(key & K_CTRL && key & K_A){
+	} else if(key & K_CTRL && key & K_A){
 		ClearSelectedObject();
 		for(Object3D& obj : allObjects){
 			AddSelectedObject(obj.GetID());
 		}
-	}
-	
+	} else if (key == K_CTRL_F)
+		ZoomToFit();
+	else if (key == K_CTRL_ADD || key == (K_CTRL|K_PLUS))
+		ProcessZoom(Point(0,0),120);
+	else if (key == K_CTRL_SUBTRACT || key == (K_CTRL|K_MINUS))
+		ProcessZoom(Point(0,0),-120);
+	else if (key == K_CTRL_C)
+		ExecuteGL(THISFN(SaveToClipboard), true);
+	else if (key == K_CTRL_S)
+		ExecuteGL(THISFN(SaveToFile), true);
+	else
+		return false;
 	if(!fastMode)Refresh();
 	return true;
 }
+
+void SurfaceCtrl::ProcessZoom(Point p, int zdelta, float multiplier){
+	camera.DetermineRotationPoint(p,allObjects,allSelected);
+	camera.ProcessMouseScroll(float(zdelta),multiplier);
+	if(!fastMode) Refresh();
+}
+void SurfaceCtrl::ViewFromAxe(Point p, bool AxeX, bool AxeY, bool AxeZ){ // Will set camera on axe selected axe
+	camera.DetermineRotationPoint(p,allObjects,allSelected);
+	camera.ViewFromAxe(AxeX,AxeY,AxeZ);
+	if(!fastMode) Refresh();
+}
+
+Image SurfaceCtrl::HandleEvent(int event, Point p, int zdelta, dword keyflags){
+	Image returnImage = Image::Hand();
+	if ((event & Ctrl::ACTION) == Ctrl::MOUSEWHEEL){
+		ProcessZoom(p,zdelta);
+	}else if ((event & Ctrl::ACTION) == Ctrl::MOUSELEAVE) {
+		camera.MouseMiddlePressed = false;
+		camera.MouseLeftPressed = false;
+	}else if ((event & Ctrl::BUTTON) == buttonRotation && (event & Ctrl::ACTION) == Ctrl::DOWN) {
+		SetFocus();
+		camera.MouseMiddlePressed = true;
+		camera.lastPress = p;
+		camera.DetermineRotationPoint(p,allObjects,allSelected);
+	} else if ((event & Ctrl::BUTTON) == buttonDrag && (event & Ctrl::ACTION) == Ctrl::DOWN) {
+		SetFocus();
+		camera.lastPress = p;
+		camera.MouseLeftPressed = true;
+		UpdateSelectedObjectViaMouse(p,keyflags);
+		if(!fastMode)Refresh();
+	} else {
+		if ((event & Ctrl::BUTTON) == buttonRotation && (event & Ctrl::ACTION) == Ctrl::UP){
+			camera.MouseMiddlePressed = false;
+			camera.ShiftPressed = false;
+		} else if ((event & Ctrl::BUTTON) == buttonDrag && (event & Ctrl::ACTION) == Ctrl::UP){
+			camera.MouseLeftPressed = false;
+		} else if((event & Ctrl::ACTION) == Ctrl::MOUSEMOVE) {
+			camera.ShiftPressed = keyflags & K_SHIFT;
+			float XOffset = float(p.x - camera.lastPress.x);
+			float YOffset = float(p.y - camera.lastPress.y);
+			if(camera.MouseMiddlePressed){
+				if(camera.ShiftPressed){
+					camera.ProcessMouseWheelTranslation(XOffset,YOffset);
+					returnImage = SurfaceCtrlImg::TranslationArrow();
+				}else{
+					camera.MouseWheelMouvement(XOffset,YOffset);
+					returnImage = SurfaceCtrlImg::RotationArrow();
+				}
+				if(!fastMode) Refresh();
+			}else if(camera.MouseLeftPressed){
+				glm::vec3 x = GetCamera().GetTransform().GetRight() * (XOffset * GetCamera().GetMouvementSpeed());
+				glm::vec3 y = GetCamera().GetTransform().GetUp() * ((YOffset * -1.0f) * GetCamera().GetMouvementSpeed());
+				MoveAllSelectedObjects(x + y);
+				returnImage = SurfaceCtrlImg::HandGrab();
+				if(!fastMode) Refresh();
+			}
+			camera.lastPress = p;
+		}
+	}
+	return returnImage;
+}
+
+Image SurfaceCtrl::MouseEvent(int event, Point p, int zdelta, dword keyflags) {
+	if (((event & Ctrl::BUTTON) == Ctrl::RIGHT) && ((event & Ctrl::ACTION) == Ctrl::UP))
+		MenuBar::Execute(THISBACK1(ContextMenu,p));
+	Image img = HandleEvent(event, p, zdelta, keyflags);
+	Refresh();
+	return img;
+}
+void SurfaceCtrl::ContextMenu(Bar& bar,const Point& p) {
+	bar.Add(t_("Fit to data"), SurfaceCtrlImg::ShapeHandles(), [&]{ZoomToFit();}).Key(K_CTRL_F).Help(t_("Zoom to fit visible all data"));
+	bar.Add(t_("Zoom +"),SurfaceCtrlImg::ZoomPlus(),  [&]{ProcessZoom(p,120,5);}) .Key(K_CTRL|K_ADD).Help(t_("Zoom in (closer)"));
+	bar.Add(t_("Zoom -"),SurfaceCtrlImg::ZoomMinus(), [&]{ProcessZoom(p,-120,5);}).Key(K_CTRL|K_SUBTRACT).Help(t_("Zoom out (away)"));
+	bar.Add(t_("View from X axis"),[&]{ViewFromAxe(p,true,false,false);});
+	bar.Add(t_("View from Y axis"),[&]{ViewFromAxe(p,false,true,false);});
+	bar.Add(t_("View from Z axis"),[&]{ViewFromAxe(p,false,false,true);});
+	bar.Separator();
+	bar.Add(t_("Copy image"),  SurfaceCtrlImg::Copy(), [&]{ExecuteGL(THISFN(SaveToClipboard), true);}).Key(K_CTRL_C).Help(t_("Copy image to clipboard"));
+	bar.Add(t_("Save image"),  SurfaceCtrlImg::Save(), [&]{ExecuteGL(THISFN(SaveToFile), true);}).Key(K_CTRL_S).Help(t_("Save image to file"));
+}
+
+
+Image SurfaceCtrl::GetImage() {
+	Size sz = GetSize();
+	ImageBuffer ib(sz);
+
+	glGetError();
+	glReadPixels(0, 0, sz.cx, sz.cy, GL_BGRA_EXT, GL_UNSIGNED_BYTE, static_cast<GLvoid*>(~ib));
+	if (GL_NO_ERROR != glGetError())
+		return Null;
+	
+	Buffer<RGBA> temp(sz.cx);
+	for(int i = 0; i < sz.cy/2; i++){
+		memcpy(temp,ib[i], sz.cx*sizeof(RGBA));
+		memcpy(ib[i], ib[sz.cy-1-i], sz.cx*sizeof(RGBA));
+		memcpy(ib[sz.cy-1-i], temp, sz.cx*sizeof(RGBA));
+	}
+	
+	for (int i = 0; i < sz.cy; i++)
+		for (int x = 0; x < sz.cx; x++)
+			ib[i][x].a = 255;
+
+	return ib;
+}
+
+void SurfaceCtrl::SaveToClipboard() {
+	GuiLock __;
+	Image image = GetImage();
+	if (IsNull(image)) {
+		Exclamation(t_("Imposible to get view image"));
+		return;
+	}
+	
+	WriteClipboardImage(image);	
+}
+
+void SurfaceCtrl::OnTypeImage(FileSel *_fs) {
+	FileSel &fs = *_fs;
+	int id = fs.type.GetIndex();
+	
+	if (id == 0)
+		fs.file = ForceExt(GetFileName(~fs), ".jpg");
+	else if (id == 1)
+		fs.file = ForceExt(GetFileName(~fs), ".png");
+	else if (id == 2)
+		fs.file = ForceExt(GetFileName(~fs), ".pdf");
+}
+
+void SurfaceCtrl::SaveToFile() {
+	GuiLock __;
+
+	Image image = GetImage();
+	if (IsNull(image)) {
+		Exclamation(t_("Imposible to get view image"));
+		return;
+	}
+	
+	FileSel fs;
+	fs.Type(Format(t_("%s bitmap file"), "jpeg"), "*.jpg");
+	fs.Type(Format(t_("%s bitmap file"), "png"), "*.png");
+	fs.Type(Format(t_("%s vector file"), "pdf"), "*.pdf");
+	fs.AllFilesType();
+	if (!defaultFileName.IsEmpty())
+		fs = defaultFileName;
+	else
+		fs = String(t_("Mesh view")) + ".jpg";
+	
+	String ext = GetFileExt(~fs);
+	fs.DefaultExt(ext);
+	int idt = 0;
+	if (ext == ".jpg" || ext == ".jpeg")
+		idt = 0;
+	else if (ext == ".png")
+		idt = 1;
+	else if (ext == ".pdf")
+		idt = 2;
+	fs.ActiveType(idt);
+
+	fs.ActiveDir(GetFileFolder(defaultFileName));
+	fs.type.WhenAction = THISBACK1(OnTypeImage, &fs);
+    if(!fs.ExecuteSaveAs(t_("Saving image to file"))) {
+        Exclamation(t_("Image has not been saved"));
+        return;
+    }
+    String fileName = defaultFileName = ~fs;
+	if (GetFileExt(fileName) == ".png") {
+		WaitCursor waitcursor;
+		PNGEncoder encoder;
+		encoder.SaveFile(fileName, image);
+	} else if (GetFileExt(fileName) == ".jpg") {
+		WaitCursor waitcursor;
+		JPGEncoder encoder(jpgQuality);
+		encoder.SaveFile(fileName, image);
+	} else if (GetFileExt(fileName) == ".pdf") {
+		WaitCursor waitcursor;
+		PdfDraw pdf(GetSize().cx, GetSize().cy);
+		pdf.DrawImage(0, 0, image);
+		SaveFile(fileName, pdf.Finish());
+	} else{
+		Exclamation(Format(t_("File format \"%s\" not found"), GetFileExt(fileName)));
+	}
+}
+
+
 }

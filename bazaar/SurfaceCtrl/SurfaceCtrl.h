@@ -6,7 +6,13 @@
 #include "MagicCamera.h"
 
 namespace Upp{
+	
+static const String GetSurfaceCtrlDirectory(){
+	return GetFileDirectory(__FILE__);
+}
+	
 class SurfaceCtrl : public GL{
+	typedef SurfaceCtrl CLASSNAME;
 	private:
 		bool loaded = false;
 		Object3DProvider objProvider;
@@ -26,6 +32,7 @@ class SurfaceCtrl : public GL{
 		OpenGLProgram DrawMeshNormal;
 		
 		bool showAxis = true;
+		bool depthAxis = false;
 		bool showCameraFocus = false;
 		
 		float sizeW = 800.0f;
@@ -100,9 +107,17 @@ class SurfaceCtrl : public GL{
 		SurfaceCtrl& ShowAxis(bool b = true)noexcept{showAxis = b; return *this;}
 		bool IsAxisEnable()const noexcept{return showAxis;}
 		
+		SurfaceCtrl& EnableDepthAxis()noexcept{depthAxis = true; return *this;}
+		SurfaceCtrl& DisableDepthAxis()noexcept{depthAxis = false; return *this;}
+		SurfaceCtrl& UseDepthAxis(bool b = true)noexcept{depthAxis = b; return *this;}
+		bool IsDepthAxisEnable()noexcept{return depthAxis;}
+		
 		//Focus option
 		SurfaceCtrl& ShowCameraFocus(bool b = true)noexcept{showCameraFocus = b; return *this;}
 		bool IsCameraFocusShow()const noexcept{return showCameraFocus;}
+		void ZoomToFit(); //Replace the camera to fit all object loaded in the screen
+		void ProcessZoom(Point p, int zdelta, float multiplier = 1.0f); // Zoom the camera out/in depending on multiplier
+		void ViewFromAxe(Point p, bool AxeX, bool AxeY, bool AxeZ); // Will set camera on axe selected axe
 		
 		//Application event
 		virtual void Layout(){GLResize(GetSize().cx,GetSize().cy);}
@@ -110,14 +125,35 @@ class SurfaceCtrl : public GL{
 		virtual void GLResize(int w, int h); //Action on resize
 		
 		//Input event
-		virtual void MouseMove(Point p, dword); //Action on mouse move
+		/*virtual void MouseMove(Point p, dword); //Action on mouse move
 		virtual void MouseWheel(Point p,int zdelta,dword keyflags); //action on Mouse wheel
 		virtual void LeftDown(Point p, dword); //Action on Left Down mouse
 		virtual void LeftUp(Point p, dword); //Action on Up down mouse
 		virtual void MiddleDown(Point p, dword keyflags); //Action Middle down (wheel down) mouse
 		virtual void MiddleUp(Point p, dword keyflags);//Action Middle up (wheel up) mouse
-		virtual void MouseLeave(); //action when mouse leave
+		virtual void MouseLeave(); //action when mouse leave*/
 		virtual bool Key(dword key,int count); //Action when key press
+		
+		
+		int buttonRotation = Ctrl::MIDDLE;
+		int buttonDrag = Ctrl::LEFT;
+		int buttonMenu = Ctrl::RIGHT;
+		
+		String defaultFileName;
+		int jpgQuality = 90;
+		Image GetImage();
+		void SaveToClipboard();
+		void SaveToFile();
+		void OnTypeImage(FileSel *_fs);
+		
+		virtual Image HandleEvent(int event, Point p, int zdelta, dword);
+		
+		
+		
+		//Menu bar
+		Image MouseEvent(int event, Point p, int zdelta, dword keyflags);
+		void ContextMenu(Bar& bar,const Point& p);
+		
 };
 #include "Object3D.h"
 }
