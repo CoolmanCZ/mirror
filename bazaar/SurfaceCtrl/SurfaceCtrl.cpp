@@ -297,10 +297,10 @@ void SurfaceCtrl::GLPaint(){
 	}
 	//Draw skybox :
 	glm::mat4 proj;
-	if(camera.GetCameraType() == CT_ORTHOGRAPHIC){
-		camera.SetCameraType(CT_PERSPECTIVE);
+	if(camera.GetCameraType() == CameraType::ORTHOGRAPHIC){
+		camera.SetCameraType(CameraType::PERSPECTIVE);
 		proj = camera.GetProjectionMatrix();
-		camera.SetCameraType(CT_ORTHOGRAPHIC);
+		camera.SetCameraType(CameraType::ORTHOGRAPHIC);
 	}else{
 		proj = camera.GetProjectionMatrix();
 	}
@@ -355,7 +355,7 @@ void SurfaceCtrl::ViewFromAxe(Point p, bool AxeX, bool AxeY, bool AxeZ){ // Will
 }
 
 Image SurfaceCtrl::HandleEvent(int event, Point p, int zdelta, dword keyflags){
-	Image returnImage = Image::Hand();
+	Image returnImage = SurfaceCtrlImg::PreciseCursor();
 	if ((event & Ctrl::ACTION) == Ctrl::MOUSEWHEEL){
 		ProcessZoom(p,zdelta);
 	}else if ((event & Ctrl::ACTION) == Ctrl::MOUSELEAVE) {
@@ -379,28 +379,30 @@ Image SurfaceCtrl::HandleEvent(int event, Point p, int zdelta, dword keyflags){
 		} else if ((event & Ctrl::BUTTON) == buttonDrag && (event & Ctrl::ACTION) == Ctrl::UP){
 			camera.MouseLeftPressed = false;
 		} else if((event & Ctrl::ACTION) == Ctrl::MOUSEMOVE) {
+			GetMouseLeft();
 			camera.ShiftPressed = keyflags & K_SHIFT;
 			float XOffset = float(p.x - camera.lastPress.x);
 			float YOffset = float(p.y - camera.lastPress.y);
 			if(camera.MouseMiddlePressed){
 				if(camera.ShiftPressed){
 					camera.ProcessMouseWheelTranslation(XOffset,YOffset);
-					returnImage = SurfaceCtrlImg::TranslationArrow();
 				}else{
 					camera.MouseWheelMouvement(XOffset,YOffset);
-					returnImage = SurfaceCtrlImg::RotationArrow();
 				}
 				if(!fastMode) Refresh();
 			}else if(camera.MouseLeftPressed){
 				glm::vec3 x = GetCamera().GetTransform().GetRight() * (XOffset * GetCamera().GetMouvementSpeed());
 				glm::vec3 y = GetCamera().GetTransform().GetUp() * ((YOffset * -1.0f) * GetCamera().GetMouvementSpeed());
 				MoveAllSelectedObjects(x + y);
-				returnImage = SurfaceCtrlImg::HandGrab();
 				if(!fastMode) Refresh();
 			}
 			camera.lastPress = p;
 		}
 	}
+	
+	if(event == CURSORIMAGE && GetMouseMiddle() && camera.MouseMiddlePressed && camera.ShiftPressed ) returnImage = SurfaceCtrlImg::TranslationArrow();
+	else if(event == CURSORIMAGE && GetMouseMiddle() && camera.MouseMiddlePressed ) returnImage = SurfaceCtrlImg::RotationArrow();
+	else if(event == CURSORIMAGE && GetMouseLeft() && camera.MouseLeftPressed ) returnImage = SurfaceCtrlImg::HandGrab();
 	return returnImage;
 }
 
@@ -419,8 +421,8 @@ void SurfaceCtrl::ContextMenu(Bar& bar,const Point& p) {
 	bar.Add(t_("View from Y axis"),[&]{ViewFromAxe(p,false,true,false);});
 	bar.Add(t_("View from Z axis"),[&]{ViewFromAxe(p,false,false,true);});
 	bar.Separator();
-	bar.Add(t_("Copy image"),  SurfaceCtrlImg::Copy(), [&]{ExecuteGL(THISFN(SaveToClipboard), true);}).Key(K_CTRL_C).Help(t_("Copy image to clipboard"));
-	bar.Add(t_("Save image"),  SurfaceCtrlImg::Save(), [&]{ExecuteGL(THISFN(SaveToFile), true);}).Key(K_CTRL_S).Help(t_("Save image to file"));
+	bar.Add(t_("Copy image"),  SurfaceCtrlImg::Copy(), [&]{ExecuteGL(THISFN(SaveToClipboard), false);}).Key(K_CTRL_C).Help(t_("Copy image to clipboard"));
+	bar.Add(t_("Save image"),  SurfaceCtrlImg::Save(), [&]{ExecuteGL(THISFN(SaveToFile), false);}).Key(K_CTRL_S).Help(t_("Save image to file"));
 }
 
 
@@ -454,8 +456,7 @@ void SurfaceCtrl::SaveToClipboard() {
 		Exclamation(t_("Imposible to get view image"));
 		return;
 	}
-	
-	WriteClipboardImage(image);	
+	WriteClipboardImage(image);
 }
 
 void SurfaceCtrl::OnTypeImage(FileSel *_fs) {

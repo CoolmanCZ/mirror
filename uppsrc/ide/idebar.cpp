@@ -46,7 +46,7 @@ void Ide::File(Bar& menu)
 {
 	if (!IsEditorMode())
 	{
-		menu.Add(AK_SETMAIN, THISBACK(NewMainPackage))
+		menu.Add(AK_SETMAIN, IdeImg::MainPackage(), THISBACK(NewMainPackage))
 			.Enable(!IdeIsDebugLock())
 			.Help("Select global configuration (var), select / add main project package");
 	}
@@ -532,8 +532,10 @@ void Ide::Project(Bar& menu)
 		if(OldLang())
 			menu.Add("Convert s_ -> t_", THISBACK(ConvertST));
 	}
-	FilePropertiesMenu(menu);
+	menu.MenuSeparator();
+	FilePropertiesMenu0(menu);
 	if(!IsEditorMode()) {
+		menu.MenuSeparator();
 		if(repo_dirs) {
 			if(menu.IsMenuBar())
 				menu.Add("Repo", THISBACK(ProjectRepo));
@@ -543,10 +545,14 @@ void Ide::Project(Bar& menu)
 	}
 }
 
-void Ide::FilePropertiesMenu(Bar& menu)
+void Ide::FilePropertiesMenu0(Bar& menu)
 {
 	menu.Add(IsActiveFile(), AK_FILEPROPERTIES, THISBACK(FileProperties))
 		.Help("File properties stored in package");
+}
+
+void Ide::FilePropertiesMenu(Bar& menu)
+{
 	menu.Add(IsActiveFile() && !designer, AK_SAVEENCODING, THISBACK(ChangeCharset))
 	    .Help("Convert actual file to different encoding");
 	menu.AddMenu(IsActiveFile() && !editfile_isfolder && !designer, AK_DIFF, IdeImg::Diff(), THISBACK(Diff))

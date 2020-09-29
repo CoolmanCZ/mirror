@@ -858,18 +858,18 @@ bool WorkspaceWork::IsAux()
 void WorkspaceWork::InsertSpecialMenu(Bar& menu)
 {
 	bool isaux = IsAux();
-	menu.Add("Insert any file(s)", THISBACK1(AddFile, ANY_FILE))
+	menu.Add("Insert any file(s)..", THISBACK1(AddFile, ANY_FILE))
 		.Key(K_SHIFT|K_CTRL_I)
 		.Help("Insert files from anywhere on disk (discouraged in portable packages)");
-	menu.Add(isaux && GetOutputDir().GetCount(), "Insert output directory file(s)", THISBACK1(AddFile, OUTPUT_FILE))
+	menu.Add(isaux && GetOutputDir().GetCount(), "Insert output directory file(s)..", THISBACK1(AddFile, OUTPUT_FILE))
 		.Help("Open file selector in output / intermediate directory for current package");
 #ifdef PLATFORM_POSIX
-	menu.Add(isaux && GetConfigDir().GetCount(), "Insert config directory file(s)", THISBACK1(AddFile, CONFIG_FILE))
+	menu.Add(isaux && GetConfigDir().GetCount(), "Insert config directory file(s)..", THISBACK1(AddFile, CONFIG_FILE))
 		.Help("Open file selector in output / intermediate directory for current package");
 #endif
-	menu.Add(isaux, "Insert Local directory file(s)", THISBACK1(AddFile, LOCAL_FILE))
+	menu.Add(isaux, "Insert Local directory file(s)..", THISBACK1(AddFile, LOCAL_FILE))
 		.Help("Open file selector in Local directory for current package");
-	menu.Add("Insert home directory file(s)", THISBACK1(AddFile, HOME_FILE))
+	menu.Add("Insert home directory file(s)..", THISBACK1(AddFile, HOME_FILE))
 		.Help("Open file selector in current user's HOME directory");
 }
 
@@ -898,14 +898,16 @@ void WorkspaceWork::FileMenu(Bar& menu)
 		InsertSpecialMenu(menu);
 	else {
 		menu.Add("New package file..", IdeCommonImg::PageAdd(), [=] { NewPackageFile(); });
-		menu.Add(!isaux, "Insert package directory file(s)", THISBACK1(AddFile, PACKAGE_FILE))
+		menu.Add(!isaux, "Insert package directory file(s)..", THISBACK1(AddFile, PACKAGE_FILE))
 			.Help("Insert file relative to current package");
-		menu.Add(!isaux, "Insert topic++ group", THISBACK(AddTopicGroup));
-		menu.Add("Special", THISBACK(SpecialFileMenu))
+		menu.Add(!isaux, "Insert topic++ group..", TopicImg::IGroup(), THISBACK(AddTopicGroup));
+	}
+	menu.Add("Insert separator..", IdeImg::Separator(), [=] { AddSeparator(); })
+		.Help("Add text separator line");
+	if(!isaux) {
+		menu.Add("Insert special", THISBACK(SpecialFileMenu))
 		    .Help("Less frequently used methods of adding files to the package");
 	}
-	menu.Add("Insert separator", IdeImg::Separator(), [=] { AddSeparator(); })
-		.Help("Add text separator line");
 	menu.Separator();
 	if(!organizer) {
 		if(sel)

@@ -120,7 +120,7 @@ void ScatterDraw::DrawLegend(Draw& w) const {
 				double lx = rect.left + (ireal - start)*legendWidth + xWidth;
 				double ly = (rowIncSign >= 0 ? rect.top : rect.bottom) +
 						 rowIncSign*int(rowHeight*(row + 0.6) + loclegendRowSpacing*(row + 0.5));
-				Vector <Pointf> line;
+				Vector<Pointf> line;
 				double dashLen = GetDashLength(serie.dash)*textScale;
 				double realLineLen = lineLen/dashLen > 1 ? dashLen*int(lineLen/dashLen) : lineLen;
 				line << Pointf(lx, ly) << Pointf(lx + realLineLen, ly);
@@ -153,7 +153,7 @@ void ScatterDraw::DrawRainbowPalette(Draw& w) const {
 	
 	Rect rect;
 	Font fnt = rainbowPaletteFont;
-	fnt.Height(int(fnt.GetHeight()*min(plotScaleX, plotScaleY)));
+	fnt.Height(int((fnt.GetHeight()+ + fnt.GetDescent())*min(plotScaleX, plotScaleY)));
 	switch(rainbowAnchor) {
 	case LEFT_TOP: 		rect.Set(int(plotLeft  + rainbowPosx), 
 								 int(plotTop   + rainbowPosy), 

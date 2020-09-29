@@ -5,6 +5,8 @@
 #define EIGEN_DENSEBASE_PLUGIN 	<plugin/Eigen/ToStringPlugin.h>
 #define EIGEN_TENSOR_PLUGIN		<plugin/Eigen/ToStringPlugin.h>
 
+#define EIGEN_MPL2_ONLY
+
 #ifndef _DEBUG
 #define EIGEN_NO_DEBUG
 #endif
@@ -51,7 +53,8 @@ struct Basic_functor : NonLinearOptimizationFunctor<double> {
 bool NonLinearOptimization(Eigen::VectorXd &y, Eigen::Index numData, 
 			Function <int(const Eigen::VectorXd &y, Eigen::VectorXd &residual)>residual,
 			double xtol = Null, double ftol = Null, int maxfev = Null);
-bool SolveNonLinearEquations(Eigen::VectorXd &y, Function <int(const Eigen::VectorXd &b, Eigen::VectorXd &residual)> Residual);
+bool SolveNonLinearEquations(Eigen::VectorXd &y, Function <int(const Eigen::VectorXd &b, Eigen::VectorXd &residual)> Residual,
+			double xtol = Null, int maxfev = Null);
 
 template <class T>
 void Xmlize(XmlIO &xml, Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> &mat) {

@@ -1,12 +1,13 @@
 #include "MagicCamera.h"
 namespace Upp{
 glm::mat4 MagicCamera::GetProjectionMatrix()const noexcept{
-	if(type == CT_PERSPECTIVE){
+	if(type == CameraType::PERSPECTIVE){
 		return glm::perspective(glm::radians(GetFOV()),float( ScreenSize.cx / ScreenSize.cy),GetDrawDistanceMin(),GetDrawDisanceMax());//We calculate Projection here since multiple camera can have different FOV
-	}else if(type == CT_ORTHOGRAPHIC){
+	}else if(type == CameraType::ORTHOGRAPHIC){
 		float distance = glm::distance(glm::vec3(0,0,0),transform.GetPosition())* float(ScreenSize.cx/ScreenSize.cy);
 		float distanceY = glm::distance(glm::vec3(0,0,0),transform.GetPosition());
 		return glm::ortho(-distance ,distance ,-distanceY ,distanceY, 0.00001f, 10000.0f);
+	//	return glm::mat4();
 	}else{
 		LOG("Swaping to Camera Perspective (cause of unknow type)");
 		return glm::perspective(glm::radians(GetFOV()),(float)( ScreenSize.cx / ScreenSize.cy),(-GetDrawDisanceMax())*10.0f,(GetDrawDisanceMax())*10.0f);//We calculate Projection here since multiple camera can have different FOV
@@ -42,7 +43,7 @@ MagicCamera& MagicCamera::MouseWheelMouvement(float xoffset,float yoffset)noexce
 	
 	glm::vec3 between;
 	
-	if(type == CT_ORTHOGRAPHIC){
+	if(type == CameraType::ORTHOGRAPHIC){
 		between =  transform.GetPosition();
 		focus = glm::vec3(0.0f,0.0f,0.0f);
 	}else{
@@ -195,20 +196,18 @@ MagicCamera& MagicCamera::DetermineRotationPoint(Point& p,const Upp::Vector<Obje
 }
 
 MagicCamera& MagicCamera::LookAt(const glm::vec3& lookat)noexcept{
-	glm::vec3  direction = lookat - transform.GetPosition();
-    float directionLength = glm::length(direction);
-    
-    if(!(directionLength > 0.0001)){ // Check if the direction is valid; Also deals with NaN
+	glm::vec3 direction = glm::normalize( lookat - transform.GetPosition());
+    if(!(glm::length(direction) > 0.0001)){ // Check if the direction is valid; Also deals with NaN
         transform.SetRotation(glm::quat(1, 0, 0, 0));
 		return *this;
     }
-    direction /= directionLength; // Normalize direction
-
-    if(glm::abs(glm::dot(direction, transform.GetWorldUp())) > .9999f) {
-        transform.SetRotation(glm::inverse(glm::quatLookAt(direction, transform.GetUp())));// Use relative up
-    } else {
-        transform.SetRotation(glm::inverse(glm::quatLookAt(direction, transform.GetWorldUp())));
-    }
+	//Check if We must use relative Up
+	glm::vec3 upToUse = transform.GetWorldUp();
+    if(glm::abs(glm::dot(direction, transform.GetWorldUp())) > .9999f) upToUse = transform.GetUp();
+    //Check if parallel
+	if(glm::vec3(0.0f) == glm::cross(transform.GetUp(),direction) ) direction = glm::normalize(lookat - (transform.GetPosition() + glm::vec3(0.001f,0.0f,0.001f))); //Change position and recalculate direction
+	//Calcul new quaternion
+    transform.SetRotation(glm::inverse(glm::quatLookAt(direction, upToUse)));
 	return *this;
 }
 

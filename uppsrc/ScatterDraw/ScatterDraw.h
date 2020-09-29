@@ -178,7 +178,7 @@ protected:
 			if (s.IsStoring()) {
 				if (markPlot)
 					markP = markPlot->GetType();
-				if (seriesP)
+				if (seriesPlot)
 					seriesP = seriesPlot->GetType();
 			}
 			s	% primaryY
@@ -281,6 +281,8 @@ protected:
 	
 		void CopyInternal() {
 			int64 sz = pD->GetCount();
+			if (IsNull(sz) || sz == 0)
+				return;
 			data.SetCount(int(sz));
 			for (int64 i = 0; i < sz; ++i) {
 				data[int(i)].x = pD->x(i);
@@ -477,11 +479,11 @@ public:
 	ScatterDraw &AddSeries(Eigen::VectorXd &yData, double x0, double deltaX)
 														{return AddSeries<EigenVector>(yData, x0, deltaX);}
 	ScatterDraw &AddSeries(Eigen::VectorXd &xData, Eigen::VectorXd &yData)
-														{return AddSeries<EigenVector>(yData, xData);}
+														{return AddSeries<EigenVector>(xData, yData);}
 	ScatterDraw &AddSeries(Vector<double> &xData, Vector<double> &yData)
-														{return AddSeries<VectorDouble>(yData, xData);}
+														{return AddSeries<VectorXY>(xData, yData);}
 	ScatterDraw &AddSeries(Upp::Array<double> &xData, Upp::Array<double> &yData)
-														{return AddSeries<ArrayDouble>(yData, xData);}		
+														{return AddSeries<ArrayXY>(xData, yData);}		
 	ScatterDraw &AddSeries(Vector<Pointf> &points)		{return AddSeries<VectorPointf>(points);}
 	ScatterDraw &AddSeries(Upp::Array<Pointf> &points)	{return AddSeries<ArrayPointf>(points);}
 	template <class Y>
@@ -661,7 +663,9 @@ public:
 	ScatterDraw &ShowSeriesLegend(int index, bool show = false);
 	ScatterDraw &ShowSeriesLegend(bool show = false)	{return ShowSeriesLegend(series.GetCount() - 1, show);}
 	bool GetShowSeriesLegend(int index)					{ASSERT(IsValid(index));ASSERT(!series[index].IsDeleted());return series[index].showLegend;}
-		
+	ScatterDraw &NoSeriesLegend(int index)				{return ShowSeriesLegend(index, false);}
+	ScatterDraw &NoSeriesLegend()						{return ShowSeriesLegend(false);}
+	
 	ScatterDraw &Opacity(double opacity = 1) {series[series.GetCount() - 1].opacity = opacity;	return *this;}
 	ScatterDraw &Legend(const String legend);
 	ScatterDraw &Legend(int index, const String legend);
@@ -682,9 +686,9 @@ public:
 	ScatterDraw &SetDrawXReticleNumbers(bool set = true) {drawXReticleNumbers = set;	return *this;}
 	ScatterDraw &SetDrawYReticleNumbers(bool set = true) {drawYReticleNumbers = set;	return *this;}
 	ScatterDraw &SetDrawY2ReticleNumbers(bool set = true){drawY2ReticleNumbers = set;	return *this;}
-	bool GetDrawXReticleNumbers()						{return drawXReticleNumbers;}
-	bool GetDrawYReticleNumbers()						{return drawYReticleNumbers;}
-	bool GetDrawY2ReticleNumbers()						{return drawY2ReticleNumbers;}
+	bool GetDrawXReticleNumbers()					{return drawXReticleNumbers;}
+	bool GetDrawYReticleNumbers()					{return drawYReticleNumbers;}
+	bool GetDrawY2ReticleNumbers()					{return drawY2ReticleNumbers;}
 	ScatterDraw &SetReticleFont(const Font &fnt)	{reticleFont = fnt;		return *this;}
 	Font &GetReticleFont()							{return reticleFont;}
 	ScatterDraw &SetReticleColor(const Color &col)	{reticleColor = col;	return *this;}
@@ -1242,7 +1246,7 @@ template <class T>
 void ScatterDraw::SetDrawing(T& w, bool ctrl) {
 	w.DrawRect(size, graphColor);
 	
-	titleHeight = !title.IsEmpty() ? fround(min(plotScaleX, plotScaleY)*titleFont.GetHeight()) : 0;
+	titleHeight = !title.IsEmpty() ? fround(min(plotScaleX, plotScaleY)*(titleFont.GetHeight()+titleFont.GetDescent())) : 0;
 	
 	plotW = size.cx - fround((hPlotLeft + hPlotRight)*plotScaleX);
 	plotH = size.cy - fround((vPlotTop + vPlotBottom)*plotScaleY) - titleHeight;
@@ -1263,7 +1267,7 @@ bool ScatterDraw::PlotTexts(T& w, const bool boldX, bool boldY) {
 		fontTitle6.Height(titleHeight);
 		Size sz = GetTextSizeSpace(title, fontTitle6);
 		if (sz.cx > size.cx*0.95) {
-			fontTitle6.Height(fround(fontTitle6.GetHeight()*size.cx*(0.95/sz.cx)));
+			fontTitle6.Height(fround((fontTitle6.GetHeight()+fontTitle6.GetDescent())*size.cx*(0.95/sz.cx)));
 			sz = GetTextSizeSpace(title, fontTitle6);
 		}
 		DrawText(w, fround((size.cx - sz.cx)/2.), plotScaleY*2, 0, title, fontTitle6, titleColor);   
@@ -1281,7 +1285,7 @@ bool ScatterDraw::PlotTexts(T& w, const bool boldX, bool boldY) {
 	
 	Upp::Font fontLabel;
 	fontLabel = labelsFont;
-	fontLabel.Height(fround(min(plotScaleX, plotScaleY)*labelsFont.GetHeight()));
+	fontLabel.Height(fround(min(plotScaleX, plotScaleY)*(labelsFont.GetHeight()+labelsFont.GetDescent())));
 	Upp::Font fontX = fontLabel;
 	if (boldX)
 		fontX.Bold();
@@ -1357,7 +1361,7 @@ bool ScatterDraw::PlotTexts(T& w, const bool boldX, bool boldY) {
 	drawY2ReticleNumbers &= (yRange2 != 0 && yMajorUnit != 0);
 	
 	Upp::Font standard6 = reticleFont;
-	standard6.Height(fround(min(plotScaleX, plotScaleY)*standard6.GetHeight()));
+	standard6.Height(fround(min(plotScaleX, plotScaleY)*(standard6.GetHeight()+standard6.GetDescent())));
 	Upp::Font fontXNum = standard6;
 	if (boldX)
 		fontXNum.Bold();
@@ -1584,8 +1588,11 @@ void ScatterDraw::Plot(T& w)
 			if (serie.IsDeleted())
 				continue;
 			DataSource &data = serie.Data();
-			if (serie.opacity == 0 || (!serie.seriesPlot && !serie.markPlot) || 
-				(!data.IsExplicit() && data.GetCount() == 0))
+			if (serie.opacity == 0 || (!serie.seriesPlot && !serie.markPlot))
+				continue;
+			if (!data.IsExplicit() && data.GetCount() == 0)
+				continue;
+			if (data.IsExplicit() && IsNull(data.GetCount()))
 				continue;
 			Vector<Pointf> points;
 			if (data.IsParam()) {
@@ -1751,17 +1758,17 @@ void ScatterDraw::Plot(T& w)
 				int dx = int(serie.labelsDx*plotScaleX);
 				int dy = int(serie.labelsDy*plotScaleY);
 				Font fnt = serie.labelsFont;
-				fnt.Height(int(fnt.GetHeight()*min(plotScaleX, plotScaleY)));
+				fnt.Height(int((fnt.GetHeight() + fnt.GetDescent())*min(plotScaleX, plotScaleY)));
 				for (int i = 0; i < points.GetCount() && i < serie.labels->GetCount(); i++) {
 					String txt = (*(serie.labels))[i];
 					Size sz = GetTextSizeSpace(txt, fnt);
 					int ddy = static_cast<int>(-sz.cy/2.);
-					int ddx;
+					int ddx = 0;
 					switch (serie.labelsAlign) {
 					case ALIGN_LEFT:	ddx = 0;		break;
 					case ALIGN_CENTER:	ddx = -sz.cx/2;	break;
 					case ALIGN_RIGHT:	ddx = -sz.cx;	break;
-					default: 			ddx = 0; // to avoid warning
+					default: 			NEVER();
 					}
 					double x = points[i].x + dx + ddx;
 					double y = points[i].y + dy + ddy;

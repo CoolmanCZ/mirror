@@ -40,7 +40,7 @@ file
 	FindInFiles.cpp,
 	Config.cpp,
 	ide.cpp,
-	idefile.cpp charset "iso8859-1",
+	idefile.cpp charset "UTF-8-BOM",
 	EditorTabBar.cpp,
 	Bottom.cpp,
 	t.cpp,

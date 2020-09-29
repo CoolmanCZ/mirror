@@ -86,11 +86,12 @@ bool LaunchFileCreateProcess(const char *file, const char *, const char *directo
 }
 
 bool LaunchFileShellExecute(const char *file, const char *params, const char *directory) {
-	return 32 < uint64(ShellExecuteW(NULL, L"open", ToSystemCharsetW(file), ToSystemCharsetW(params), ToSystemCharsetW(directory), SW_SHOWNORMAL));		 
-}
+	uint64 ret = uint64(ShellExecuteW(NULL, L"open", ToSystemCharsetW(file), ToSystemCharsetW(params), ToSystemCharsetW(directory), SW_SHOWNORMAL));		 
+	return 32 < ret;
+} 
 
 bool LaunchFile(const char *file, const char *params, const char *directory) {
-	String _file = WinPath(file);
+	String _file = Trim(WinPath(file));
 	String _params, _directory;
 	if (params)
 		_params = WinPath(params);
@@ -2541,12 +2542,12 @@ Value GetVARIANT(VARIANT &result)
 
 String WideToString(LPCWSTR wcs, int len) {
 	if (len == -1) {
-		len = WideCharToMultiByte(CP_UTF8, 0, wcs, len, NULL, 0, NULL, NULL);	
+		len = WideCharToMultiByte(CP_UTF8, 0, wcs, len, nullptr, 0, nullptr, nullptr);	
 		if (len == 0)
 			return Null;
 	}
 	Buffer<char> w(len);
-	WideCharToMultiByte(CP_UTF8, 0, wcs, len, w, len, NULL, NULL);
+	WideCharToMultiByte(CP_UTF8, 0, wcs, len, w, len, nullptr, nullptr);
 	return ~w;	
 }
 
@@ -2573,7 +2574,7 @@ bool Dl::Load(const String &fileDll) {
 		if (FreeLibrary(hinstLib) == 0)
 			return false;
 	
-	hinstLib = LoadLibraryEx(TEXT(fileDll), NULL, LOAD_IGNORE_CODE_AUTHZ_LEVEL);
+	hinstLib = LoadLibraryEx(TEXT(fileDll), nullptr, LOAD_IGNORE_CODE_AUTHZ_LEVEL);
 	if (!hinstLib) 
 		return false;
 	return true;
@@ -2581,7 +2582,7 @@ bool Dl::Load(const String &fileDll) {
 
 void *Dl::GetFunction(const String &functionName) {
 	if (!hinstLib) 
-		return NULL;
+		return nullptr;
 	return reinterpret_cast<void *>(GetProcAddress(hinstLib, functionName));
 }
 
@@ -2612,7 +2613,7 @@ bool Dl::Load(const String &fileDll) {
 
 void *Dl::GetFunction(const String &functionName) {
 	if (!hinstLib) 
-		return NULL;
+		return nullptr;
 	return dlsym(hinstLib, functionName);
 }	
 
@@ -2798,6 +2799,23 @@ size_t GetNumLines(Stream &stream) {
 
 
 bool SetConsoleColor(CONSOLE_COLOR color) {
+	static Vector<int> colors;
+	if (color == RESET)
+		colors.Clear();
+	else if(color == PREVIOUS) {
+		int num = colors.size();
+		if (num == 0)
+			color = RESET;
+		else {
+			colors.Remove(num-1);
+			if (num-2 < 0) 
+				color = RESET;
+			else
+				color = static_cast<CONSOLE_COLOR>(colors[num-2]); 
+		}
+	} else
+		colors << color;
+
 #ifdef PLATFORM_WIN32
 	static HANDLE hstdout = 0;
 	static CONSOLE_SCREEN_BUFFER_INFO csbiInfo = {};
