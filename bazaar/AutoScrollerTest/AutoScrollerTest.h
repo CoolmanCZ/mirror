@@ -2,8 +2,9 @@
 #define _AutoScrollerTest_AutoScrollerTest_h
 
 #include <CtrlLib/CtrlLib.h>
+#include <AutoScroller/AutoScroller.h>
 
-using namespace Upp;
+namespace Upp {
 
 #define LAYOUTFILE <AutoScrollerTest/AutoScrollerTest.lay>
 #include <CtrlCore/lay.h>
@@ -11,21 +12,17 @@ using namespace Upp;
 #define IMAGEFILE <AutoScrollerTest/AutoScrollerTest.iml>
 #include <Draw/iml_header.h>
 
-//if use only ParentCtrl as base
-//#include <AutoScroller/AutoScroller.h>
-//if use custom base
-#include <AutoScroller/AutoScroller.hpp>
-
 class AutoScrollerTest : public WithAutoScrollerTestLayout<TopWindow> {
 public:
-	typedef AutoScrollerTest CLASSNAME;
 	AutoScrollerTest();
 	
 	void Toggle();
 
-	AutoScroller<ParentCtrl> sc;	
-	WithTestLay<ParentCtrl> view;
+public:
+	AutoScroller<ParentCtrl> scroller;
+	WithTestLay<ParentCtrl> scroller_view;
 };
 
-#endif
+}
 
+#endif

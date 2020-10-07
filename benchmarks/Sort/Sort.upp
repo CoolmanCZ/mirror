@@ -1,5 +1,6 @@
 uses
-	Core;
+	Core,
+	TestData;
 
 file
 	Sort.cpp;

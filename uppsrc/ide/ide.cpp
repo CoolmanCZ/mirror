@@ -565,7 +565,7 @@ void Ide::MakeIcon() {
 		idraw.DrawImage(0, 0, li);
 		mdraw.DrawImage(0, 0, li, White);
 		int fh = DPI(14);
-		Size sz;
+		Size sz(0, 0);
 		Font font;
 		while(fh > DPI(8)) {
 			font = StdFont(fh);
@@ -627,8 +627,6 @@ void Ide::SetIcon()
 
 void Ide::Periodic()
 {
-	static int h = 0;
-	h = msecs();
 	CheckFileUpdate();
 	SetIcon();
 	if(debugger && debugger->IsFinished() && !IdeIsDebugLock())

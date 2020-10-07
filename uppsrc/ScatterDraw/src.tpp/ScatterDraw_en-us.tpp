@@ -620,9 +620,9 @@ e]([@(0.0.255) int]_[*@3 `_mode]_`=_MD`_ANTIALIASED)&]
 [s3; Returns the drawing mode as documented in SetMode().&]
 [s1;%- &]
 [s6;%- &]
-[s5;:ScatterDraw`:`:ZoomToFit`(bool`,bool`,double`):%- [@(0.0.255) void]_[* ZoomToFit]([@(0.0.255) b
-ool]_[*@3 horizontal], [@(0.0.255) bool]_[*@3 vertical]_`=_[@(0.0.255) false], 
-[@(0.0.255) double]_[*@3 factor]_`=_[@3 0])&]
+[s5;:ScatterDraw`:`:ZoomToFit`(bool`,bool`,double`):%- [_^ScatterDraw^ ScatterDraw][@(0.0.255) `&
+]_[* ZoomToFit]([@(0.0.255) bool]_[*@3 horizontal], [@(0.0.255) bool]_[*@3 vertical]_`=_[@(0.0.255) f
+alse], [@(0.0.255) double]_[*@3 factor]_`=_[@3 0])&]
 [s3; Rescales the x axis if [%-*@3 horizontal ]is true and y axis if 
 [%-*@3 vertical] is true to show all graphs data.on the control. 
 [%-*@3 factor] indicates the fit factor (0 fills the control) .&]
@@ -953,6 +953,12 @@ and X axis ([%-*@3 unitsX]).&]
 [s5;:ScatterDraw`:`:GetUnitsY`(int`):%- [@(0.0.255) const]_[_^String^ String]_[* GetUnitsY](
 [@(0.0.255) int]_[*@3 index])&]
 [s3; Returns the Y axis units for [%-*@3 index] series.&]
+[s1; &]
+[s6;%- &]
+[s5;:Upp`:`:ScatterDraw`:`:LegendLine`(bool`):%- [_^Upp`:`:ScatterDraw^ ScatterDraw]_`&
+[* LegendLine]([@(0.0.255) bool]_[*@3 b]_`=_[@(0.0.255) true])&]
+[s3; Draw line in series legend even if the series does not plot 
+lines (NoPlot).&]
 [s1; &]
 [s6;%- &]
 [s5;:ScatterDraw`:`:IsValid`(int`)const:%- [@(0.0.255) bool]_[* IsValid]([@(0.0.255) int]_[*@3 i

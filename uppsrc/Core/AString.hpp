@@ -266,7 +266,16 @@ inline
 bool String0::IsEqual(const char *s) const
 { // This optimized for comparison with string literals...
 	size_t len = strlen(s);
-	return len == GetCount() && memcmp(begin(), s, len) == 0; // compiler is happy to optimize memcmp out...
+	const void *p;
+	if(IsSmall()) {
+		if(len > 14 || len != (size_t)chr[SLEN]) return false; // len > 14 fixes issue with GCC warning, might improves performance too
+		p = chr;
+	}
+	else {
+		if(len != (size_t)w[LLEN]) return false;
+		p = ptr;
+	}
+	return memcmp(p, s, len) == 0; // compiler is happy to optimize memcmp out with up to 64bit comparisons for literals...
 }
 
 force_inline
