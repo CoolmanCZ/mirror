@@ -61,9 +61,10 @@ void MacroManagerWindow::InitToolButton(
 
 void MacroManagerWindow::InitButtons()
 {
-	closeButton.Close();
+	close.Close();
 	
-	closeButton        << [=] { Break(); };
+	close              << [=] { Break(); };
+	help               << [=] { LaunchWebBrowser("https://www.ultimatepp.org/app$ide$MacroManager_en-us.html"); };
 	editLabel          << [=] { OnEditFile(); };
 	exportLabel        << [=] { OnExport(globalTree.GetCursor()); };
 	newGlobalLabel     << [=] { OnNewMacroFile(); };
@@ -255,8 +256,9 @@ void MacroManagerWindow::OnNewMacroFile()
 void MacroManagerWindow::OnDeleteMacroFile()
 {
 	auto fileName = static_cast<String>(globalTree.GetValue());
-	if(!PromptOKCancel(t_("Are you sure you want to remove following macro file \"" + fileName + "\"?")))
+	if(!PromptOKCancel(String(t_("Are you sure you want to remove following macro file")) << " \"" << fileName << "\"?")) {
 		return;
+	}
 	
 	FileDelete(AppendFileName(GetLocalDir(), fileName));
 	globalTree.Remove(globalTree.GetCursor());

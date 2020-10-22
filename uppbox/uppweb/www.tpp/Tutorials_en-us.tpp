@@ -31,11 +31,14 @@ luck!&]
 [s3; Let`'s learn about our integrated development environment TheIDE. 
 This is rather the collection of applications tutorial rather 
 than code tutorial. We strongly recommended to start here, because 
-the code using U`+`+ framework is mainly written in TheIDE.&]
+the code that uses U`+`+ framework is mainly written in TheIDE.&]
 [s3; Please notice that you could use our integrated development 
 environment separately. It can even acts as a powerful editor.&]
 [s3;l160;i150;O0; [*^topic`:`/`/ide`/app`/GettingStarted`$en`-us^ Getting 
-started with TheIDE] `- the introduction to the concepts of TheIDE&]
+started with TheIDE] `- the introduction to the concepts of TheIDE.&]
+[s3;l160;i150;O0; [*^topic`:`/`/ide`/app`/Guide`_en`-us^ TheIDE beginner 
+guide] `- continuation provides information how to solve common 
+problems.&]
 [s0; &]
 [s2; U`+`+ framework&]
 [s3; Use the whole power provided by the U`+`+ framework. Learn how 

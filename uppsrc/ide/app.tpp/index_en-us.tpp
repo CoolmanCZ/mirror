@@ -25,6 +25,7 @@ topic "TheIde help index";
 [s0;l224;^topic`:`/`/ide`/app`/GettingStarted`$en`-us^ &]
 [s0;l224; [^topic`:`/`/ide`/app`/GettingStarted`$en`-us^ Getting started 
 with TheIDE]&]
+[s0;l224; [^topic`:`/`/ide`/app`/Guide`_en`-us^ TheIDE beginner guide]&]
 [s0;l224; [^topic`:`/`/ide`/app`/PackagesAssembliesAndNests`$en`-us^ Packages, 
 Assemblies and Nests]&]
 [s0;l224; [^topic`:`/`/ide`/app`/ConfiguringPackagesAssemblies`$en`-us^ Configuring 
@@ -40,6 +41,7 @@ line arguments]&]
 [s0;l224; [^topic`:`/`/ide`/app`/Flags`$en`-us^ Build flags]&]
 [s0;l224; [^topic`:`/`/ide`/app`/Topic`$en`-us^ Topic`+`+]&]
 [s0;l224; [^topic`:`/`/ide`/app`/macros`$en`-us^ Macros]&]
+[s0;l224; [^topic`:`/`/ide`/app`/MacroManager`_en`-us^ Macro Manager]&]
 [s0;l224; [^topic`:`/`/ide`/app`/IconDes`$en`-us^ Icon designer]&]
 [s0;l224; [^topic`:`/`/ide`/app`/special`$en`-us^ Special features]&]
 [s0;l224; [^topic`:`/`/ide`/app`/AdvancedReplace`$en`-us^ Advanced 
@@ -47,7 +49,7 @@ Find and Replace]&]
 [s0;l224; [^topic`:`/`/ide`/app`/FindFile`$en`-us^ Finding specific 
 file in the project (Find File)]&]
 [s0;l224; [^topic`:`/`/ide`/app`/importext`$en`-us^ Importing external 
-libraries]&]
+libraries in source form]&]
 [s0;l224; &]
 [s0;l224; [^topic`:`/`/ide`/app`/PackageTemplates`$en`-us^ U`+`+ package/project 
 templates]&]

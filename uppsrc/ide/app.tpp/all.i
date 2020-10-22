@@ -62,6 +62,10 @@ TOPIC("GettingStarted_en-us")
 #include "GettingStarted_en-us.tppi"
 END_TOPIC
 
+TOPIC("Guide_en-us")
+#include "Guide_en-us.tppi"
+END_TOPIC
+
 TOPIC("IconDes_en-us")
 #include "IconDes_en-us.tppi"
 END_TOPIC
@@ -72,6 +76,10 @@ END_TOPIC
 
 TOPIC("Keys_en-us")
 #include "Keys_en-us.tppi"
+END_TOPIC
+
+TOPIC("MacroManager_en-us")
+#include "MacroManager_en-us.tppi"
 END_TOPIC
 
 TOPIC("NewProject_en-us")
