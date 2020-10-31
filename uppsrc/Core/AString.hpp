@@ -278,6 +278,41 @@ bool String0::IsEqual(const char *s) const
 	return memcmp(p, s, len) == 0; // compiler is happy to optimize memcmp out with up to 64bit comparisons for literals...
 }
 
+inline
+int String0::Compare(const String0& s) const
+{
+#ifdef CPU_LE
+	if((chr[KIND] | s.chr[KIND]) == 0) { // both strings are small, len is the MSB
+	#ifdef CPU_64
+		uint64 a = SwapEndian64(q[0]);
+		uint64 b = SwapEndian64(s.q[0]);
+		if(a != b)
+			return a < b ? -1 : 1;
+		a = SwapEndian64(q[1]);
+		b = SwapEndian64(s.q[1]);
+		return a == b ? 0 : a < b ? -1 : 1;
+	#else
+		uint64 a = SwapEndian32(w[0]);
+		uint64 b = SwapEndian32(s.w[0]);
+		if(a != b)
+			return a < b ? -1 : 1;
+		a = SwapEndian32(w[1]);
+		b = SwapEndian32(s.w[1]);
+		if(a != b)
+			return a < b ? -1 : 1;
+		a = SwapEndian32(w[2]);
+		b = SwapEndian32(s.w[2]);
+		if(a != b)
+			return a < b ? -1 : 1;
+		a = SwapEndian32(w[3]);
+		b = SwapEndian32(s.w[3]);
+		return a == b ? 0 : a < b ? -1 : 1;
+	#endif
+	}
+#endif
+	return CompareL(s);
+}
+
 force_inline
 String& String::operator=(const char *s)
 {
@@ -289,6 +324,20 @@ force_inline
 String::String(const char *s)
 {
 	String0::Set0(s, strlen__(s));
+}
+
+force_inline
+void String0::Swap(String0& b)
+{
+	qword a0 = q[0]; // Explicit code (instead of Swap) seems to emit some SSE2 code with CLANG
+	qword a1 = q[1];
+	qword b0 = b.q[0];
+	qword b1 = b.q[1];
+	q[0] = b0;
+	q[1] = b1;
+	b.q[0] = a0;
+	b.q[1] = a1;
+	Dsyn(); b.Dsyn();
 }
 
 force_inline
