@@ -50,7 +50,14 @@ Array<LayoutItem> ReadItems(CParser& p, byte charset)
 		String type;
 		if(p.Id("ITEM")) {
 			p.PassChar('(');
-			if(p.IsId()) type = p.ReadIdt();
+			for(;;)
+				if(p.Char2(':', ':'))
+					type << "::";
+				else
+				if(p.IsId())
+					type << p.ReadIdt();
+				else
+					break;
 			p.PassChar(',');
 		}
 		else
@@ -59,6 +66,9 @@ Array<LayoutItem> ReadItems(CParser& p, byte charset)
 		else
 			return items;
 		LayoutItem& m = items.Add();
+		int q = type.ReverseFind(':');
+		if(q >= 0)
+			type = type.Mid(q + 1);
 		m.Create(type);
 		m.SetCharset(charset);
 		m.variable = ReadVar(p);
