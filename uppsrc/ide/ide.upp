@@ -21,7 +21,8 @@ uses
 	ide/MacroManager,
 	ugit,
 	urepo,
-	Report;
+	Report,
+	Core/SSL;
 
 file
 	IDE readonly separator,
