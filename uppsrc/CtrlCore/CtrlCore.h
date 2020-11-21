@@ -104,6 +104,9 @@ enum {
 #endif
 
 	IK_DBL_CLICK   = 0x40000001, // this is just to get the info that the entry is equal to dbl-click to the menu
+	
+	K_MOUSE_FORWARD = 0x80000001,
+	K_MOUSE_BACKWARD = 0x80000002,
 };
 
 #include "MKeys.h"
@@ -1215,7 +1218,7 @@ public:
 	bool   IsDragAndDropSource()    { return this == GetDragAndDropSource(); }
 	bool   IsDragAndDropTarget()    { return this == GetDragAndDropTarget(); }
 	static Size  StdSampleSize()    { return Size(DPI(126), DPI(106)); }
-
+	
 public:
 	static void SetSkin(void (*skin)());
 
@@ -1286,6 +1289,31 @@ public:
 
 	Ctrl();
 	virtual ~Ctrl();
+
+private: // support for for(Ctrl& q : *this)
+	class CtrlConstIterator {
+	protected:
+		friend class Ctrl;
+		const Ctrl *q;
+	
+	public:
+		void operator++()                           { q = q->GetNext(); }
+		bool operator!=(CtrlConstIterator& b) const { return q != b.q; }
+		const Ctrl& operator*() const               { return *q; }
+	};
+	
+	class CtrlIterator : public CtrlConstIterator { // support for(Ctrl *q : *this)
+		friend class Ctrl;
+	
+	public:
+		Ctrl& operator*()                           { return *const_cast<Ctrl *>(q); }
+	};
+
+public:
+	CtrlConstIterator begin() const { CtrlConstIterator c; c.q = GetFirstChild(); return c; }
+	CtrlIterator begin()            { CtrlIterator c; c.q = GetFirstChild(); return c; }
+	CtrlConstIterator end() const   { CtrlConstIterator c; c.q = NULL; return c; }
+	CtrlIterator end()              { CtrlIterator c; c.q = NULL; return c; }
 };
 
 inline Size GetScreenSize()  { return Ctrl::GetVirtualScreenArea().GetSize(); } // Deprecated

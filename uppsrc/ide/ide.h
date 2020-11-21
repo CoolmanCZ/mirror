@@ -336,6 +336,9 @@ struct WebSearchTab : WithWebSearchTabLayout<ParentCtrl> {
 	WebSearchTab();
 };
 
+void SearchEnginesDefaultSetup();
+String SearchEnginesFile();
+
 struct Ide : public TopWindow, public WorkspaceWork, public IdeContext, public MakeBuild {
 public:
 	virtual   void   Paint(Draw& w);
@@ -851,8 +854,6 @@ public:
         void  GotoPosition();
 
 	void OnlineSearchMenu(Bar& menu);
-		void OnlineSearch(String uri);
-		bool IsSearchProvidersMenuVisible() const;
 
 	void SearchMenu(Bar& bar);
 		void  EditFind()                { editor.FindReplace(find_pick_sel, find_pick_text, false); }

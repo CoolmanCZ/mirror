@@ -132,6 +132,7 @@ void AppMain___()
 
 	Ctrl::SetUHDEnabled();
 	Ctrl::SetDarkThemeEnabled();
+	Ctrl::SetAppName("TheIDE");
 
 	SetLanguage(LNG_ENGLISH);
 	SetDefaultCharset(CHARSET_UTF8);
@@ -167,6 +168,9 @@ void AppMain___()
 
 	if(!FileExists(BlitzBaseFile()))
 		ResetBlitz();
+	
+	if(!FileExists(SearchEnginesFile()))
+		SearchEnginesDefaultSetup();
 
 	bool dosplash = true;
 	for(int i = 0; i < arg.GetCount(); i++)
