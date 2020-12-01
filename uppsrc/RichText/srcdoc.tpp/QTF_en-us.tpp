@@ -1,4 +1,4 @@
-topic "QTF";
+topic "QTF - Quixotic Text Format";
 [@(128.0.255)2 $$1,0#65874547464505293575048467215454:QTF Chr]
 [*C@3+75 $$2,2#36268203433472503231438721581057:code]
 [a83;*R6 $$3,0#31310162474203024125188417583966:caption]
@@ -7,7 +7,7 @@ topic "QTF";
 [b83;*+117 $$6,6#1546C2CD4112BAB0A26C534D6F11ED13:subtitle]
 [2 $$0,0#00000000000000000000000000000000:Default]
 [{_}%EN-US 
-[s3; QTF&]
+[s3; QTF `- Quixotic Text Format&]
 [s4; Table of contents&]
 [s0; &]
 [s0; [^topic`:`/`/RichText`/srcdoc`/QTF`_en`-us`#1^ 1. Definition]&]
@@ -29,10 +29,13 @@ Header and Footer]&]
 [s0; [^topic`:`/`/RichText`/srcdoc`/QTF`_en`-us`#3^ 3. Examples]&]
 [s0; &]
 [s4;:1: 1. Definition&]
-[s5; QTF is the native format of Ultimate`+`+ rich texts (formatted 
-texts).&]
-[s5; It is byte oriented format. Bytes with values 2`-31 are ignored. 
-Other values are interpreted as characters or formatting commands.&]
+[s5; [* Quixotic Text Format] ([* QTF]) is the native format of U`+`+ 
+rich texts (formatted texts). It is byte oriented format. Bytes 
+with values 2`-31 are ignored. Other values are interpreted as 
+characters or formatting commands.&]
+[s5; QTF name existed before U`+`+ framework received its final name, 
+so its name does not directly refer to it. For backwards compatibility 
+reasons the community never decided to rename it.&]
 [s4;:2: 2. Format overview&]
 [s6;:2`_1: 2.1 Symbols&]
 [s5; Letters ([@4 a]`-[@4 zA]`-[@4 Z]), numbers ([@4 0]`-[@4 9]), space (32) 
@@ -324,7 +327,9 @@ optimization, [*@(128.0.255) %`-] is equivalent to [@(128.0.255) %][@(0.0.255) 0
 ::^ [s0;%- [C@(128.0.255) i][/C@(0.0.255) number]]
 ::= [s0; Indent in dots.]
 ::^ [s0;%- [C@(128.0.255) pn]]
-::= [s0; Line spacing 1.0.]
+::= [s0; Line spacing 1.0 (default).]
+::^ [s0;%- [C@(128.0.255) pw]]
+::= [s0; Line spacing 1.15.]
 ::^ [s0;%- [C@(128.0.255) ph]]
 ::= [s0; Line spacing 1.5.]
 ::^ [s0;%- [C@(128.0.255) pd]]

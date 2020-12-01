@@ -929,6 +929,7 @@ void WorkspaceWork::FileMenu(Bar& menu)
 	menu.Separator();
 	menu.Add("Open File Directory",THISBACK(OpenFileFolder));
 	menu.Add("Copy File Path", callback1(WriteClipboardText, GetActiveFilePath()));
+	menu.Add("Terminal at File Directory", [=] { LaunchTerminal(GetFileDirectory(GetActiveFilePath())); });
 	menu.Separator();
 	menu.Add(filelist.GetCursor() > 0, "Move up", THISBACK1(MoveFile, -1))
 		.Key(organizer ? K_CTRL_UP : K_SHIFT_CTRL_UP)
@@ -1111,6 +1112,7 @@ void WorkspaceWork::PackageMenu(Bar& menu)
 			menu.Separator();
 			BuildPackageMenu(menu);
 			menu.Add("Open Package Directory",THISBACK(OpenPackageFolder));
+			menu.Add("Terminal at Package Directory", [=] { LaunchTerminal(GetFileDirectory(GetActivePackagePath())); });
 		}
 	}
 }

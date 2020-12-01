@@ -119,11 +119,8 @@ public:
 
 private:
     void OnUpp();
-    void OnBrowseUpp();
 
 private:
-    FrameRight<Button> browse_upp;
-    SelectDirButton    browse_out;
     bool               new_base;
 };
 
@@ -168,6 +165,7 @@ struct SelectPackageDlg : public WithSelectPackageLayout<TopWindow> {
 		String nest;
 		Image  icon;
 		bool   main;
+		bool   upphub;
 
 		bool operator<(const PkInfo& b) const { return PackageLess(package, b.package); }
 		
@@ -319,6 +317,7 @@ struct WorkspaceWork {
 	virtual void   FileRename(const String& nm)       {}
 	virtual bool   FileRemove()                       { return true; }
 	virtual void   SyncSvnDir(const String& working)  {}
+	virtual void   LaunchTerminal(const char *dir)    {}
 
 	void   ScanWorkspace();
 	void   SavePackage();

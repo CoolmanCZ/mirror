@@ -307,6 +307,7 @@ void   DlSpellerLangs(DropList& dl);
 
 #include "Assist.h"
 
+void DirSelect(Ctrl& t, Button& b);
 void DirSel(EditField& f, FrameRight<Button>& b);
 bool CopyFolder(const char *dst, const char *src, Progress *pi);
 void RepoSyncDirs(const Vector<String>& working);
@@ -1051,6 +1052,8 @@ public:
 	String    GetIdeLogPath();
 	void      OpenLog(const String& logFilePath);
 
+	virtual void      LaunchTerminal(const char *dir);
+	
 //	Console&  GetConsole();
 
 	struct FindLineErrorCache {
@@ -1259,5 +1262,8 @@ inline void ShowConsole() { if(TheIde()) ((Ide *)TheIde())->ShowConsole(); }
 void InstantSetup();
 
 bool SetupSVNTrunk();
+
+void UppHub();
+void UppHubAuto(const String& s);
 
 #endif

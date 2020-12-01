@@ -178,6 +178,21 @@ void Ide::ExecuteBinary()
 	}
 }
 
+void Ide::LaunchTerminal(const char *dir)
+{
+	One<Host> h = CreateHostRunDir();
+	h->ChDir(dir);
+#ifdef PLATFORM_WIN32
+	h->Launch(Nvl(HostConsole, "powershell.exe"), false);
+#else
+	String c = HostConsole;
+	int q = c.Find(' ');
+	if(q >= 0)
+		c.Trim(q);
+	h->Launch(Nvl(c, "/usr/bin/xterm"), false);
+#endif
+}
+
 class SelectAndroidDeviceDlg : public WithSelectAndroidDeviceLayout<TopWindow> {
 	typedef SelectAndroidDeviceDlg CLASSNAME;
 	

@@ -100,6 +100,8 @@ void Ide::File(Bar& menu)
 	menu.MenuSeparator();
 	
 	menu.Add(AK_OPENFILEDIR, THISBACK(OpenFileFolder));
+	menu.Add("Copy File Path", [=] { WriteClipboardText(GetActiveFilePath()); });
+	menu.Sub("Properties", [=](Bar& bar) { FilePropertiesMenu(bar); });
 	menu.MenuSeparator();
 
 	menu.Add(AK_STATISTICS, THISBACK(Statistics))
@@ -389,6 +391,7 @@ void Ide::Setup(Bar& menu)
 	    .Help("Setups/fixes build methods and basic assemblies..");
 #endif
 	menu.MenuSeparator();
+	menu.Add("UppHub..", [] { UppHub(); });
 	menu.Add("Checkout and setup U++ SVN trunk sources..", [=] {
 		if(SetupSVNTrunk()) {
 			IdeAgain = true;
@@ -548,6 +551,7 @@ void Ide::FilePropertiesMenu0(Bar& menu)
 
 void Ide::FilePropertiesMenu(Bar& menu)
 {
+	FilePropertiesMenu0(menu);
 	menu.Add(IsActiveFile() && !designer, AK_SAVEENCODING, THISBACK(ChangeCharset))
 	    .Help("Convert actual file to different encoding");
 	bool candiff = IsActiveFile() && !editfile_isfolder && !designer;
@@ -735,10 +739,9 @@ void Ide::BuildMenu(Bar& menu)
 		.Help("Find next " + hh + "according to console pane");
 	menu.Add(ffb, AK_FINDPREVERROR, THISBACK(FindPrevError))
 		.Help("Find previous " + hh + "according to console pane");
-#if defined(PLATFORM_WIN32) || defined(PLATFORM_POSIX)
 	menu.MenuSeparator();
 	menu.Add(!IsNull(target), AK_OPENOUTDIR, THISBACK(OpenOutputFolder));
-#endif
+	menu.Add(!IsNull(target), "Terminal at output directory", [=] { LaunchTerminal(GetFileFolder(target)); });
 }
 
 void Ide::DebugMenu(Bar& menu)
@@ -850,7 +853,7 @@ void Ide::HelpMenu(Bar& menu)
 {
 	if(!IsEditorMode()) {
 		menu.Add(AK_BROWSETOPICS, IdeImg::help(), THISBACK(ShowTopics));
-		menu.Add(AK_SEARCHTOPICS, THISBACK(SearchTopics));
+		menu.Add(editor.GetWord().GetCount(), AK_SEARCHTOPICS, THISBACK(SearchTopics));
 	}
 	menu.Add(AK_BROWSETOPICS_WIN, IdeImg::help_win(), THISBACK(ShowTopicsWin));
 	menu.MenuSeparator();

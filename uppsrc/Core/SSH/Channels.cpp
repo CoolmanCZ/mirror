@@ -12,7 +12,7 @@ bool SshChannel::Init()
 
 	LIBSSH2_CHANNEL *ch = libssh2_channel_open_session(ssh->session);
 	if(!ch && !WouldBlock())
-		SetError(-1);
+		ThrowError(-1);
 	if(ch) {
 		channel = MakeOne<LIBSSH2_CHANNEL*>(ch);
 		LLOG("A new channel is opened.");
@@ -28,14 +28,14 @@ void SshChannel::Exit()
 	Run([=]() mutable {
 		int rc = libssh2_channel_free(*channel);
 		if(!WouldBlock(rc) && rc < 0)
-			SetError(rc);
+			ThrowError(rc);
 		if(!rc) {
 			ssh->init = false;
 			channel.Clear();
 			LLOG("Channel succesfully freed.");
 		}
 		return !rc;
-	});
+	}, false);
 }
 
 bool SshChannel::Open()
@@ -49,7 +49,7 @@ bool SshChannel::Close()
 {
 	return Run([=]() mutable {
 		int rc = libssh2_channel_close(*channel);
-		if(!WouldBlock(rc) && rc < 0) SetError(rc);
+		if(!WouldBlock(rc) && rc < 0) ThrowError(rc);
 		if(!rc) LLOG("Channel close message is sent to the server.");
 		return !rc;
 	});
@@ -59,7 +59,7 @@ bool SshChannel::WaitClose()
 {
 	return Run([=]() mutable {
 		int rc = libssh2_channel_wait_closed(*channel);
-		if(!WouldBlock(rc) && rc < 0) SetError(rc);
+		if(!WouldBlock(rc) && rc < 0) ThrowError(rc);
 		if(!rc)	LLOG("Channel close message is acknowledged by the server.");
 		return !rc;
 	});
@@ -76,7 +76,7 @@ bool SshChannel::Request(const String& request, const String& params)
 			params.GetLength()
 		);
 		if(!WouldBlock(rc) && rc < 0)
-			SetError(rc);
+			ThrowError(rc);
 		if(!rc)
 			LLOG("\"" << request << "\" request (params: " << params << ") is successful.");
 		return !rc;
@@ -98,7 +98,7 @@ bool SshChannel::RequestTerminal(const String& term, int width, int height, cons
 			LIBSSH2_TERM_HEIGHT_PX
 		);
 		if(!WouldBlock(rc) && rc < 0)
-			SetError(rc);
+			ThrowError(rc);
 		if(!rc)
 			LLOG("Terminal (" << term << ") [W:" << width << ", H:" << height << "] opened.");
 		return !rc;
@@ -109,7 +109,7 @@ bool SshChannel::SetEnv(const String& variable, const String& value)
 {
 	return Run([=]() mutable {
 		int rc = libssh2_channel_setenv(*channel, variable, value);
-		if(!WouldBlock(rc) && rc < 0) SetError(rc);
+		if(!WouldBlock(rc) && rc < 0) ThrowError(rc);
 		if(!rc)	LLOG("Environment variable '" << variable << "' set to " << value);
 		return !rc;
 	});
@@ -119,7 +119,7 @@ bool SshChannel::PutEof()
 {
 	return Run([=]() mutable {
 		int rc = libssh2_channel_send_eof(*channel);
-		if(!WouldBlock(rc) && rc < 0) SetError(rc);
+		if(!WouldBlock(rc) && rc < 0) ThrowError(rc);
 		if(!rc)	LLOG("EOF message is sent to the server.");
 		return !rc;
 	});
@@ -129,7 +129,7 @@ bool SshChannel::GetEof()
 {
 	return Run([=]() mutable {
 		int rc = libssh2_channel_wait_eof(*channel);
-		if(!WouldBlock(rc) && rc < 0) SetError(rc);
+		if(!WouldBlock(rc) && rc < 0) ThrowError(rc);
 		if(!rc) LLOG("EOF message is acknowledged by the server.");;
 		return !rc;
 	});
@@ -169,7 +169,7 @@ bool SshChannel::SetReadWindowSize(uint32 size, bool force)
 bool SshChannel::SetWndSz(uint32 size, bool force)
 {
 	int rc = libssh2_channel_receive_window_adjust2(*channel, size, (unsigned char) force, nullptr);
-	if(!WouldBlock(rc) && rc < 0) SetError(rc);
+	if(!WouldBlock(rc) && rc < 0) ThrowError(rc);
 	if(!rc) LLOG(Format("Receive window size set is to %d.", AsString(size)));
 	return !rc;
 }
@@ -203,11 +203,11 @@ int SshChannel::Get(void *ptr, int size, int sid)
 {
 	done = 0;
 	Run([=]() mutable {
-		while(done < size && InProgress() && !IsEof() && !IsTimeout()) {
+		while(done < size && !IsEof() && !IsTimeout()) {
 			int rc = Read(ptr, size, sid);
-			if(rc == 0) break;
-			if(rc > 0) RefreshUI();
 			if(rc < 0) return false;
+			if(!rc) break;
+			UpdateClient();
 		}
 		return true;
 	});
@@ -219,7 +219,7 @@ String SshChannel::Get(int size, int sid)
 	StringBuffer sb(size);
 	int len = Get(~sb, size, sid);
 	sb.SetCount(len);
-	return sb;
+	return pick(String(sb));
 }
 
 String SshChannel::GetLine(int maxlen, int sid)
@@ -243,7 +243,7 @@ String SshChannel::GetLine(int maxlen, int sid)
 				done++;
 			}
 		}
-		while(!eol && !IsEof() && !IsTimeout() && InProgress());
+		while(!eol && !IsEof() && !IsTimeout());
 		return eol || IsEof();
 	});
 	return line;
@@ -253,11 +253,11 @@ int SshChannel::Put(const void *ptr, int size, int sid)
 {
 	done = 0;
 	Run([=]() mutable {
-		while(done < size && InProgress() && !IsEof() && !IsTimeout()) {
+		while(done < size && !IsEof() && !IsTimeout()) {
 			int rc = Write(ptr, size, sid);
-			if(rc == 0) break;
-			if(rc > 0) RefreshUI();
 			if(rc < 0) return false;
+			if(!rc) break;
+			UpdateClient();
 		}
 		return true;
 	});
@@ -271,9 +271,10 @@ int SshChannel::Read(void *ptr, int size, int sid)
 	int rc = static_cast<int>(
 		libssh2_channel_read_ex(*channel, sid, (char*) ptr + done, size_t(sz))
 		);
-
-	if(rc < 0 && !WouldBlock(rc))
-		SetError(rc);
+	if(rc < 0 && !WouldBlock(rc)) {
+		ThrowError(rc);
+	}
+	else
 	if(rc > 0) {
 		done += rc;
 		ssh->start_time = msecs();
@@ -296,9 +297,10 @@ int SshChannel::Write(const void *ptr, int size, int sid)
 	int rc = static_cast<int>(
 		libssh2_channel_write_ex(*channel, sid, (const char*) ptr + done, size_t(sz))
 		);
-		
-	if(!WouldBlock(rc) && rc < 0)
-		SetError(rc);
+	if(rc < 0 && !WouldBlock(rc)) {
+		ThrowError(rc);
+	}
+	else
 	if(rc > 0) {
 		done += rc;
 		ssh->start_time = msecs();
@@ -348,7 +350,7 @@ bool SshChannel::Shut(const String& msg, bool nowait)
 	if(Close() && eof)
 		WaitClose();
 	if(!IsNull(msg))
-		ReportError(-1, msg);
+		SetError(-1, msg);
 	return !IsError();
 }
 

@@ -804,7 +804,7 @@ void FileSel::SelectNet()
 }
 
 #ifdef PLATFORM_WIN32
-void FileSel::ScanNetwork(Function<Array<NetNode> ()> fn)
+bool FileSel::ScanNetwork(Function<Array<NetNode> ()> fn)
 {
 	Progress pi(t_("Scanning network.."));
 	loading_network = true;
@@ -821,14 +821,14 @@ void FileSel::ScanNetwork(Function<Array<NetNode> ()> fn)
 			break;
 		if(pi.StepCanceled()) {
 			SetDir("");
-			return;
+			return false;
 		}
 		Sleep(10);
 	}
 	for(;;) {
 		if(pi.StepCanceled()) {
 			SetDir("");
-			return;
+			return false;
 		}
 		if(!loading_network) {
 			LoadNet();
@@ -836,6 +836,7 @@ void FileSel::ScanNetwork(Function<Array<NetNode> ()> fn)
 		}
 		Sleep(10);
 	}
+	return true;
 }
 
 bool FileSel::netroot_loaded;
@@ -848,14 +849,13 @@ void FileSel::ScanNetworkRoot()
 		LoadNet();
 		return;
 	}
-	ScanNetwork([] {
+	netroot_loaded = ScanNetwork([] {
 		Array<NetNode> n;
 		n = NetNode::EnumRoot();
 		n.Append(NetNode::EnumRemembered());
 		return n;
 	});
 	netroot = clone(netnode);
-	netroot_loaded = true;
 }
 #endif
 
@@ -2002,9 +2002,14 @@ bool FileSel::Execute(int _mode) {
 		LruAdd(lru, d, 12);
 		Vector<String> glru;
 		d = NormalizePath(d);
-		LoadFromGlobal(glru, "GlobalFileSelectorLRU");
-		LruAdd(glru, d, 5);
-		StoreToGlobal(glru, "GlobalFileSelectorLRU");
+		Index<String> h;
+		for(int i = 0; i < fixed_places; i++)
+			h.Add(NormalizePath(~places.Get(i, 0)));
+		if(h.Find(d) < 0) {
+			LoadFromGlobal(glru, "GlobalFileSelectorLRU");
+			LruAdd(glru, d, 5);
+			StoreToGlobal(glru, "GlobalFileSelectorLRU");
+		}
 	}
 
 	places.SetCount(fixed_places);

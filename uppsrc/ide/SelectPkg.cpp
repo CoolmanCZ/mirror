@@ -177,8 +177,7 @@ void SelectPackageDlg::MovePackage(bool copy)
 	}
 
 	dlg.dir <<= d0;
-	dlg.select.SetImage(CtrlImg::Dir());
-	dlg.select << [&] { String d = SelectDirectory(); if(d.GetCount()) dlg.dir <<= d; };
+	DirSelect(dlg.dir, dlg.select);
 
 	dlg.name <<= GetCurrentName();
 
@@ -617,7 +616,7 @@ void SelectPackageDlg::SyncList(const String& find)
 		const PkInfo& pkg = packages[i];
 		Image icon = pkg.icon;
 		if(IsNull(icon))
-			icon = pkg.main ? IdeImg::MainPackage() : IdeImg::Package();
+			icon = pkg.main ? IdeImg::MainPackage() : pkg.upphub ? IdeImg::HubPackage() : IdeImg::Package();
 		clist.Add(pkg.package, DPI(icon, 16));
 		alist.Add(pkg.package, pkg.nest, pkg.description, icon);
 		alist.SetDisplay(alist.GetCount() - 1, 0, pkg.main ? bpd : pd);
@@ -637,12 +636,13 @@ void SelectPackageDlg::ScanFolder(const String& path, ArrayMap<String, PkData>& 
 {
 	for(FindFile ff(AppendFileName(path, "*.*")); ff; ff.Next())
 		if(ff.IsFolder() && !ff.IsHidden()) {
-			dir_exists.Add(ff.GetPath());
 			String p = ff.GetPath();
+			dir_exists.Add(p);
 			bool nw = nd.Find(p) < 0; // Do we have any info loaded about this package?
-			PkData& d = nd.GetAdd(ff.GetPath());
+			PkData& d = nd.GetAdd(p);
 			d.package = prefix + ff.GetName();
 			d.nest = nest;
+			d.upphub = InUppHub(p);
 			if(nw) { // No cached info available about the folder
 				d.ispackage = IsLetter(*d.package) && d.package.Find('.') < 0; // First heuristic guess
 				d.main = d.ispackage && prefix.GetCount() == 0; // Expect it is main

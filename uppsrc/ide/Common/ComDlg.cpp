@@ -4,6 +4,24 @@
 #define IMAGEFILE  <ide/Common/common.iml>
 #include <Draw/iml_source.h>
 
+void DirSelect(Ctrl& t, Button& b)
+{
+	b.SetImage(CtrlImg::Dir());
+	b << [&] {
+		String s = SelectDirectory();
+		if(s.GetCount())
+			t <<= s;
+	};
+}
+
+void DirSel(EditField& f, FrameRight<Button>& b)
+{
+	b.Width(DPI(20));
+	f.InsertFrame(0, b);
+	f.InsertFrame(1, RightGapFrame());
+	DirSelect(f, b);
+}
+
 void IdeFileIcon0(bool dir, const String& filename, Image& img)
 {
 	if(dir) return;
