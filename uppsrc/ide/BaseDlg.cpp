@@ -198,6 +198,8 @@ BaseSetupDlg::BaseSetupDlg()
 
 	upp << [=] { OnUpp(); };
 	
+	output_sel.Tip("Select output directory...");
+	upv_sel.Tip("Select UppHub directory...");
 	DirSelect(output, output_sel);
 	DirSelect(upv, upv_sel);
 	upv.NullText("Default");
@@ -207,7 +209,7 @@ bool BaseSetupDlg::Run(String& vars)
 {
 	upp     <<= GetVar("UPP");
 	output  <<= GetVar("OUTPUT");
-	upv     <<= GetVar("UPPIVERSE");
+	upv     <<= GetVar("UPPHUB");
 	base    <<= vars;
 	new_base = IsNull(vars);
 	
@@ -227,7 +229,7 @@ bool BaseSetupDlg::Run(String& vars)
 		}
 		SetVar("UPP", ~upp);
 		SetVar("OUTPUT", ~output);
-		SetVar("UPPIVERSE", ~upv);
+		SetVar("UPPHUB", ~upv);
 		Vector<String> paths = SplitDirs(upp.GetText().ToString());
 		for(int i = 0; i < paths.GetCount(); i++)
 			RealizeDirectory(paths[i]);
