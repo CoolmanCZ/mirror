@@ -1,6 +1,16 @@
-#include "urepo.h"
+#include "ide.h"
 
-namespace Upp {
+String RepoSys(const char *cmd)
+{
+	Ide *ide = (Ide *)TheIde();
+	if(!ide)
+		return String::GetVoid();
+	Host host;
+	ide->CreateHost(host, false, false);
+	LocalProcess p;
+	String out;
+	return host.StartProcess(p, cmd) && p.Finish(out) == 0 ? out : String::GetVoid();
+}
 
 UrepoConsole::UrepoConsole()
 {
@@ -34,9 +44,17 @@ int UrepoConsole::System(const char *cmd)
 		Open();
 	list.Add(AttrText(cmd).SetFont(font().Bold()).Ink(SLtBlue()));
 	int ii = list.GetCount();
-	LocalProcess p;
-	if(!p.Start(cmd))
+	Ide *ide = (Ide *)TheIde();
+	if(!ide)
 		return -1;
+	Host host;
+	ide->CreateHost(host, false, false);
+//	host.AddEnvironment("ASK_PASS", GetExeFilePath() + " #git_ask_pass");
+	LocalProcess p;
+	if(!host.StartProcess(p, cmd)) {
+		list.Add(AttrText("Failed to start the executable").SetFont(font().Bold()).Ink(SLtRed()));
+		return -1;
+	}
 	String out;
 	canceled = false;
 	cancel.Show();
@@ -87,5 +105,3 @@ int UrepoConsole::Git(const char *dir, const char *command)
 	SetCurrentDirectory(h);
 	return code;
 }
-
-};

@@ -72,6 +72,8 @@ void Ide::CopyPosition()
 				return;
 			}
 	}
+	
+	WriteClipboardText(GetFileName(editfile) << ":" << editor.GetCurrentLine());
 }
 
 void Ide::GotoPosition()
@@ -475,7 +477,7 @@ void RepoSyncDirs(const Vector<String>& working)
 	String repocfg = ConfigFile("repo.cfg");
 	repo.SetMsgs(LoadFile(repocfg));
 	for(String d : working)
-		repo.Dir(InUppHub(d), d);
+		repo.Dir(false && InUppHub(d), d);
 	repo.DoSync();
 	SaveFile(repocfg, repo.GetMsgs());
 	if(f)
@@ -567,6 +569,9 @@ void Ide::DoPatchDiff()
 	Vector<String> d = GetUppDirs();
 	for(int i = 0; i < d.GetCount(); i++)
 		dir.FindAdd(d[i]);
+	const Workspace& wspc = IdeWorkspace();
+	for(int i = 0; i < wspc.GetCount(); i++)
+		dir.FindAdd(GetFileFolder(PackagePath(wspc[i])));
 	static PatchDiff dlg;
 	dlg.diff.WhenLeftLine = THISBACK1(GotoDirDiffLeft, &dlg);
 	if(!dlg.IsOpen()) {
@@ -624,18 +629,21 @@ void Ide::RemoveDs()
 
 void Ide::LaunchAndroidSDKManager(const AndroidSDK& androidSDK)
 {
-	One<Host> host = CreateHost(darkmode, disable_uhd);
-	IGNORE_RESULT(host->Execute(androidSDK.GetLauchSDKManagerCmd()));
+	Host host;
+	CreateHost(host, darkmode, disable_uhd);
+	IGNORE_RESULT(host.Execute(androidSDK.GetLauchSDKManagerCmd()));
 }
 
 void Ide::LaunchAndroidAVDManager(const AndroidSDK& androidSDK)
 {
-	One<Host> host = CreateHost(darkmode, disable_uhd);
-	IGNORE_RESULT(host->Execute(androidSDK.GetLauchAVDManagerCmd()));
+	Host host;
+	CreateHost(host, darkmode, disable_uhd);
+	IGNORE_RESULT(host.Execute(androidSDK.GetLauchAVDManagerCmd()));
 }
 
 void Ide::LauchAndroidDeviceMonitor(const AndroidSDK& androidSDK)
 {
-	One<Host> host = CreateHost(darkmode, disable_uhd);
-	IGNORE_RESULT(host->Execute(androidSDK.MonitorPath()));
+	Host host;
+	CreateHost(host, darkmode, disable_uhd);
+	IGNORE_RESULT(host.Execute(androidSDK.MonitorPath()));
 }

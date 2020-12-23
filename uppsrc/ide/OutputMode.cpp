@@ -221,7 +221,7 @@ public:
 		MinimizeBox().CloseBoxRejects();
 		threads <<= hydra1_threads;
 		threads.NotNull(false);
-		cmdAssembly = GetVarsName();
+		cmdAssembly = GetAssemblyId();
 		cmdBuildMode = (targetmode == 1 ? "r" : "d");
 		if (mainconfigparam.GetCount()) {
 			cmdMainConfig = mainconfigparam;
@@ -314,10 +314,11 @@ void OutMode::CmdOptions()
 		PromptOK("Invalid build method");
 		return;
 	}
-	One<Host> host = ide.CreateHost(false, false);
-	One<Builder> b = ide.CreateBuilder(~host);
+	Host host;
+	ide.CreateHost(host, false, false);
+	One<Builder> b = ide.CreateBuilder(&host);
 	const String& p = wspc[pi];
-	String output = NativePath(ide.OutDir(ide.PackageConfig(wspc, pi, bm, ~config, *host, *b), p, bm, true));
+	String output = NativePath(ide.OutDir(ide.PackageConfig(wspc, pi, bm, ~config, host, *b), p, bm, true));
 	if (output.Right(1) == ".")
 		output = output.Left(output.GetCount() - 1);
 	const ModePane& pane = ~mode == 0 ? debug : release;

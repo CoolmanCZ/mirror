@@ -93,15 +93,18 @@ String NoCr(const char *s)
 	return out;
 }
 
-One<Host> MakeBuild::CreateHost(bool darkmode, bool disable_uhd)
+void MakeBuild::CreateHost(Host& host, bool darkmode, bool disable_uhd)
 {
 	SetupDefaultMethod();
 	VectorMap<String, String> bm = GetMethodVars(method);
-	One<Host> outhost;
 	{
-		auto& host = outhost.Create<LocalHost>();
-		VectorMap<String, String> env(Environment(), 1);
+		VectorMap<String, String> env = clone(Environment());
 		host.exedirs = SplitDirs(bm.Get("PATH", "") + ';' + env.Get("PATH", ""));
+#ifdef PLATFORM_WIN32
+		String p = GetExeDirFile("bin/mingit/cmd");
+		if(FileExists(p + "/git.exe"))
+			host.exedirs.Add(p);
+#endif
 		env.GetAdd("PATH") = Join(host.exedirs, ";");
 		env.GetAdd("UPP_MAIN__") = GetFileDirectory(PackagePath(GetMain()));
 		env.GetAdd("UPP_ASSEMBLY__") = GetVar("UPP");
@@ -109,7 +112,6 @@ One<Host> MakeBuild::CreateHost(bool darkmode, bool disable_uhd)
 			env.GetAdd("UPP_DISABLE_UHD__") = "1";
 		if(darkmode)
 			env.GetAdd("UPP_DARKMODE__") = "1";
-		
 		// setup LD_LIBRARY_PATH on target dir, needed for all shared builds on posix
 #ifdef PLATFORM_POSIX
 		if(target != "")
@@ -126,7 +128,6 @@ One<Host> MakeBuild::CreateHost(bool darkmode, bool disable_uhd)
 		host.environment.Cat(0);
 		host.cmdout = &cmdout;
 	}
-	return outhost;
 }
 
 One<Builder> MakeBuild::CreateBuilder(Host *host)
@@ -215,7 +216,7 @@ String MakeBuild::OutDir(const Index<String>& cfg, const String& package, const 
 	Index<String> excl;
 	excl.Add(bm.Get("BUILDER", "GCC"));
 	excl.Add("MSC");
-	LocalHost().AddFlags(excl);
+	Host().AddFlags(excl);
 	Vector<String> x;
 	bool dbg = cfg.Find("DEBUG_FULL") >= 0 || cfg.Find("DEBUG_MINIMAL") >= 0;
 	if(cfg.Find("DEBUG") >= 0) {
@@ -236,53 +237,13 @@ String MakeBuild::OutDir(const Index<String>& cfg, const String& package, const 
 		x[i] = InitCaps(x[i]);
 	String outdir = GetVar("OUTPUT");
 	if(output_per_assembly)
-		outdir = AppendFileName(outdir, GetVarsName());
+		outdir = AppendFileName(outdir, GetAssemblyId());
 	if(!use_target)
 		outdir = AppendFileName(outdir, package);
 	outdir = AppendFileName(outdir, GetFileTitle(method) + "." + Join(x, "."));
 	outdir = Filter(outdir, CharFilterSlash);
 	return outdir;
 }
-
-struct OneFileHost : Host {
-	One<Host> host;
-	String    onefile;
-
-	virtual String GetEnvironment()                { return host->GetEnvironment(); }
-	virtual String GetHostPath(const String& path) { return host->GetHostPath(path); }
-	virtual String GetLocalPath(const String& path) { return host->GetLocalPath(path); }
-	virtual String NormalizePath(const String& path) { return host->NormalizePath(path); }
-	virtual String NormalizeExecutablePath(const String& path) { return host->NormalizeExecutablePath(path); }
-	virtual void   DeleteFile(const Vector<String>& path) { host->DeleteFile(path); }
-	virtual void   DeleteFolderDeep(const String& folder) { host->DeleteFolderDeep(folder); }
-	virtual void   ChDir(const String& path) { host->ChDir(path); }
-	virtual bool   RealizeDir(const String& path) { return host->RealizeDir(path); }
-	virtual bool   SaveFile(const String& path, const String& data) { return host->SaveFile(path, data); }
-	virtual String LoadFile(const String& path) { return host->LoadFile(path); }
-	virtual int    Execute(const char *c) { return host->Execute(c); }
-	virtual int    ExecuteWithInput(const char *c, bool noconvert) { return host->ExecuteWithInput(c, noconvert); }
-	virtual int    Execute(const char *c, Stream& o, bool noconvert) { return host->Execute(c, o, noconvert); }
-	virtual int    AllocSlot() { return host->AllocSlot(); }
-	virtual bool   Run(const char *cmdline, int slot, String key, int blitz_count) { return host->Run(cmdline, slot, key, blitz_count); }
-	virtual bool   Run(const char *cmdline, Stream& out, int slot, String key, int blitz_count) { return host->Run(cmdline, out, slot, key, blitz_count); }
-	virtual bool   Wait() { return host->Wait(); }
-	virtual bool   Wait(int slot) { return host->Wait(slot); }
-	virtual void   OnFinish(Event<>  cb) { return host->OnFinish(cb); }
-	virtual One<AProcess> StartProcess(const char *c) { return host->StartProcess(c); }
-	virtual void   Launch(const char *cmdline, bool) { host->Launch(cmdline); }
-	virtual void   AddFlags(Index<String>& cfg) { host->AddFlags(cfg); }
-	virtual const  Vector<String>& GetExecutablesDirs() const { return host->GetExecutablesDirs(); }
-
-	virtual Vector<FileInfo> GetFileInfo(const Vector<String>& path) {
-		Vector<FileInfo> fi = host->GetFileInfo(path);
-		for(int i = 0; i < path.GetCount(); i++)
-			if(path[i] == onefile)
-				(Time &)fi[i] = GetSysTime();
-			else
-				(Time &)fi[i] = Time::Low();
-		return fi;
-	}
-};
 
 void MakeBuild::PkgConfig(const Workspace& wspc, const Index<String>& config, Index<String>& pkg_config)
 {
@@ -304,25 +265,21 @@ bool MakeBuild::BuildPackage(const Workspace& wspc, int pkindex, int pknumber, i
 		ConsoleShow();
 		return false;
 	}
-	One<Host> host = CreateHost(false, false);
-	if(!IsNull(onefile)) {
-		OneFileHost *h = new OneFileHost;
-		h->host = pick(host);
-		h->onefile = onefile;
-		host = h;
-	}
-	One<Builder> b = CreateBuilder(~host);
+	Host host;
+	CreateHost(host, false, false);
+	host.onefile = onefile;
+	One<Builder> b = CreateBuilder(&host);
 	if(!b)
 		return false;
-	b->config = PackageConfig(wspc, pkindex, bm, mainparam, *host, *b);
+	b->config = PackageConfig(wspc, pkindex, bm, mainparam, host, *b);
 	PkgConfig(wspc, b->config, b->pkg_config);
 	const TargetMode& m = targetmode == 0 ? debug : release;
 	b->version = m.version;
 	b->method = method;
 	b->outdir = OutDir(b->config, package, bm);
-	host->RealizeDir(b->outdir);
+	host.RealizeDir(b->outdir);
 	String mainfn = Null;
-	Index<String> mcfg = PackageConfig(wspc, 0, bm, mainparam, *host, *b, &mainfn);
+	Index<String> mcfg = PackageConfig(wspc, 0, bm, mainparam, host, *b, &mainfn);
 	HdependClearDependencies();
 	for(int i = 0; i < pkg.GetCount(); i++) {
 		const Array<OptItem>& f = pkg[i].depends;
@@ -331,7 +288,7 @@ bool MakeBuild::BuildPackage(const Workspace& wspc, int pkindex, int pknumber, i
 				HdependAddDependency(SourcePath(package, pkg[i]), SourcePath(package, f[j].text));
 	}
 	String tout = OutDir(mcfg, mainpackage, bm, use_target);
-	host->RealizeDir(tout);
+	host.RealizeDir(tout);
 	if(IsNull(mainfn))
 		mainfn = GetFileTitle(mainpackage) + b->GetTargetExt();
 	if(!IsNull(outfile))
@@ -340,22 +297,22 @@ bool MakeBuild::BuildPackage(const Workspace& wspc, int pkindex, int pknumber, i
 	#ifdef PLATFORM_COCOA
 		if(m.target_override && !IsNull(m.target)
 		   && IsFolder(m.target) && GetFileExt(m.target) == ".app")
-			target = host->NormalizePath(m.target);
+			target = NormalizePath(m.target);
 		else
 	#endif
 		if(m.target_override && !IsNull(m.target) && IsFolder(m.target))
-			target = host->NormalizePath(AppendFileName(m.target, mainfn));
+			target = NormalizePath(AppendFileName(m.target, mainfn));
 		else
 		if(m.target_override && (IsFullPath(m.target) || *m.target == '/' || *m.target == '\\'))
 			target = m.target;
 		else
 		if(m.target_override && !IsNull(m.target))
-			target = host->NormalizePath(AppendFileName(tout, m.target));
+			target = NormalizePath(AppendFileName(tout, m.target));
 		else
 		if(IsFullPath(mainfn))
 			target = mainfn;
 		else
-			target = host->NormalizePath(AppendFileName(tout, mainfn));
+			target = NormalizePath(AppendFileName(tout, mainfn));
 	}
 	b->target = target;
 	b->mainpackage = mainpackage;
@@ -369,19 +326,21 @@ bool MakeBuild::BuildPackage(const Workspace& wspc, int pkindex, int pknumber, i
 	else
 		b->config.FindAdd("NOLIB");
 	bool ok = b->BuildPackage(package, linkfile, immfile, linkopt,
-		                      GetAllUses(wspc, pkindex, bm, mainparam, *host, *b),
-		                      GetAllLibraries(wspc, pkindex, bm, mainparam, *host, *b),
+		                      GetAllUses(wspc, pkindex, bm, mainparam, host, *b),
+		                      GetAllLibraries(wspc, pkindex, bm, mainparam, host, *b),
 		                      targetmode - 1);
 	target = b->target; // apple app bundle can change target
 	Vector<String> errors = PickErrors();
-	host->DeleteFile(errors);
+	for(String p : errors)
+		DeleteFile(p);
 	if(!ok || !errors.IsEmpty())
 		return false;
 	if(link) {
 		ok = b->Link(linkfile, linkopt, GetTargetMode().createmap);
 		PutLinkingEnd(ok);
 		errors = PickErrors();
-		host->DeleteFile(errors);
+		for(String p : errors)
+			DeleteFile(p);
 		if(!ok || !errors.IsEmpty())
 			return false;
 	}
@@ -466,7 +425,7 @@ bool MakeBuild::Build(const Workspace& wspc, String mainparam, String outfile, b
 	DeleteFile(hfile);
 	
 	ClearErrorEditor();
-	BeginBuilding(true, clear_console);
+	BeginBuilding(clear_console);
 	bool ok = true;
 	main_conf.Clear();
 	if(wspc.GetCount()) {
@@ -483,10 +442,11 @@ bool MakeBuild::Build(const Workspace& wspc, String mainparam, String outfile, b
 
 		if(main_conf.GetCount()) {
 			VectorMap<String, String> bm = GetMethodVars(method);
-			One<Host> host = CreateHost(false, false);
-			One<Builder> b = CreateBuilder(~host);
+			Host host;
+			CreateHost(host, false, false);
+			One<Builder> b = CreateBuilder(&host);
 			if(b) {
-				Index<String> mcfg = PackageConfig(wspc, 0, bm, mainparam, *host, *b, NULL);
+				Index<String> mcfg = PackageConfig(wspc, 0, bm, mainparam, host, *b, NULL);
 				String outdir = OutDir(mcfg, wspc[0], bm, false);
 				String path = AppendFileName(outdir, "main.conf.h");
 				RealizePath(path);
@@ -563,12 +523,13 @@ bool MakeBuild::Build()
 		ConsoleShow();
 		return false;
 	}
-	One<Host> host = CreateHost(false, false);
-	One<Builder> builder = CreateBuilder(~host);
+	Host host;
+	CreateHost(host, false, false);
+	One<Builder> builder = CreateBuilder(&host);
 	if(!builder)
 		return false;
 	Index<String> p = PackageConfig(GetIdeWorkspace(), 0, bm, mainconfigparam,
-	                                *host, *builder);
+	                                host, *builder);
 	Workspace wspc;
 	wspc.Scan(GetMain(), p.GetKeys());
 	return Build(wspc, mainconfigparam, Null);
@@ -577,12 +538,13 @@ bool MakeBuild::Build()
 void MakeBuild::CleanPackage(const Workspace& wspc, int package)
 {
 	PutConsole(Format("Cleaning %s", wspc[package]));
-	One<Host> host = CreateHost(false, false);
-	One<Builder> builder = CreateBuilder(~host);
+	Host host;
+	CreateHost(host, false, false);
+	One<Builder> builder = CreateBuilder(&host);
 	if(!builder)
 		return;
 	String outdir = OutDir(PackageConfig(wspc, package, GetMethodVars(method), mainconfigparam,
-	                       *host, *builder), wspc[package], GetMethodVars(method));
+	                       host, *builder), wspc[package], GetMethodVars(method));
 	// TODO: almost perfect, but target will be detected after build. if build does not occur the target is empty :(
 	// How to make sure we know target? Target directory is where android project sandbox is.
 	builder->target = target;
@@ -593,8 +555,9 @@ void MakeBuild::Clean()
 {
 	ConsoleClear();
 
-	One<Host> host = CreateHost(false, false);
-	One<Builder> builder = CreateBuilder(~host);
+	Host host;
+	CreateHost(host, false, false);
+	One<Builder> builder = CreateBuilder(&host);
 	if(!builder)
 		return;
 	builder->target = target;

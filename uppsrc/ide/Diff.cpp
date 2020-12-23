@@ -1,9 +1,7 @@
-#include "urepo.h"
-
-namespace Upp {
+#include "ide.h"
 
 #define IMAGECLASS UrepoImg
-#define IMAGEFILE  <urepo/urepo.iml>
+#define IMAGEFILE  <ide/urepo.iml>
 #include <Draw/iml.h>
 
 struct RepoDiff : DiffDlg {
@@ -132,5 +130,3 @@ void RunRepoDiff(const String& filepath)
 	RepoDiff dlg;
 	dlg.Execute(filepath);
 }
-
-};

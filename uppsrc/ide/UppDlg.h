@@ -142,7 +142,7 @@ struct SelectPackageDlg : public WithSelectPackageLayout<TopWindow> {
 
 	SelectPackageDlg(const char *title, bool selectvars, bool main);
 
-	String         Run(String startwith);
+	String         Run(String& nest, String startwith);
 
 	void           Serialize(Stream& s);
 
@@ -151,13 +151,15 @@ struct SelectPackageDlg : public WithSelectPackageLayout<TopWindow> {
 	ParentCtrl     list;
 	FileList       clist;
 	ArrayCtrl      alist;
+	
+	Vector<String> nest_list;
 
 	bool           selectvars;
 	bool           loading;
 	int            loadi;
 	bool           finished;
 	bool           canceled;
-	String         selected;
+	String         selected, selected_nest;
 
 	struct PkInfo {
 		String package;
@@ -183,6 +185,7 @@ struct SelectPackageDlg : public WithSelectPackageLayout<TopWindow> {
 	Array<PkInfo>             packages;
 	Array< ArrayMap<String, PkData> > data;
 
+	String         GetCurrentNest();
 	String         GetCurrentName();
 	int            GetCurrentIndex();
 	void           SyncBrief();
@@ -203,6 +206,7 @@ struct SelectPackageDlg : public WithSelectPackageLayout<TopWindow> {
 	void           ListCursor();
 	void           ChangeDescription();
 
+	void           SyncFilter();
 	void           ScanFolder(const String& path, ArrayMap<String, PkData>& nd,
 	                          const String& nest, Index<String>& dir_exists,
 	                          const String& prefix);
@@ -223,7 +227,7 @@ struct SelectPackageDlg : public WithSelectPackageLayout<TopWindow> {
 	void           MovePackage(bool copy);
 	
 	enum {
-		MAIN = 1, FIRST = 2
+		MAIN = 0x1000, NEST = 0x2000, NEST_MASK = 0xfff
 	};
 };
 
@@ -232,8 +236,10 @@ bool DelGitFile(const String& file);
 bool RenameGitFile(const String& spath, const String& dpath);
 bool RenamePackageFs(const String& upp, const String& newname, bool duplicate = false);
 
+String SelectPackage(String& nest, const char *title, const char *startwith = NULL,
+                     bool selectvars = false, bool all = false);
 String SelectPackage(const char *title, const char *startwith = NULL,
-	bool selectvars = false, bool all = false);
+	                 bool selectvars = false, bool all = false);
 
 int CondFilter(int c);
 int FlagFilter(int c);
@@ -335,13 +341,13 @@ struct WorkspaceWork {
 	void   CloseAllGroups();
 	void   GroupOrFile(Point pos);
 
-	void   SetMain(const String& m)                           { main = m; }
-	void   FindSetPackage(const String& s)                    { package.FindSetCursor(s); }
+	void   SetMain(const String& pkg)                 { main = pkg; }
+	void   FindSetPackage(const String& s)            { package.FindSetCursor(s); }
 
 	void   ShowFile(int pi);
 
-	String         GetActivePackage() const                   { return package.GetCurrentName(); }
-	String         GetActivePackagePath() const               { return PackagePath(package.GetCurrentName()); }
+	String         GetActivePackage() const           { return package.GetCurrentName(); }
+	String         GetActivePackagePath() const       { return PackagePath(package.GetCurrentName()); }
 	String         GetActiveFileName() const;
 	String         GetActiveFilePath() const;
 	void           OpenFileFolder();

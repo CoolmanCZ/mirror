@@ -1,11 +1,4 @@
-#ifndef _urepo_urepo_h_
-#define _urepo_urepo_h_
-
-#include <TextDiffCtrl/TextDiffCtrl.h>
-
-namespace Upp {
-
-#define LAYOUTFILE <urepo/urepo.lay>
+#define LAYOUTFILE <ide/urepo.lay>
 #include <CtrlCore/lay.h>
 
 class UrepoConsole : public WithUrepoConsoleLayout<TopWindow> {
@@ -25,6 +18,8 @@ public:
 
 	UrepoConsole();
 };
+
+String RepoSys(const char *cmd);
 
 String SvnCmd(const char *cmd);
 
@@ -105,7 +100,3 @@ public:
 void EditCredentials(RepoSync& rs);
 
 void RunRepoDiff(const String& filepath);
-
-};
-
-#endif

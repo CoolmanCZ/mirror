@@ -41,7 +41,7 @@ void Ide::MakeTitle()
 		for(int i = 0; i < 10; i++)
 			if(NormalizePath(editfile) == NormalizePath(bookmark[i].file))
 				title << Format(" <%d>", i);
-	title << " { " << GetVarsName() << " }";
+	title << " { " << GetAssemblyId() << " }";
 	if(isscanning)
 		title << " (scanning files)";
 	Title(title.ToWString());
@@ -159,8 +159,11 @@ bool Ide::OpenMainPackage()
 #else
 	tt << " (TheIDE " << version << ')';
 #endif
-	String p = SelectPackage(tt, main, true, true);
+	String nest;
+	String p = SelectPackage(nest, tt, main, true, true);
 	if(p.IsEmpty()) return false;
+	InvalidatePackageCache();
+	SetMainNest(nest);
 	main.Clear();
 	if(!IsOpen())
 		Open();
@@ -171,7 +174,9 @@ bool Ide::OpenMainPackage()
 void Ide::NewMainPackage()
 {
 	if(setmain_newide) {
-		CreateHost(false, false)->Launch(GetExeFilePath() + " --nosplash");
+		Host h;
+		CreateHost(h, false, false);
+		h.Launch(GetExeFilePath() + " --nosplash");
 	}
 	else {
 		SaveCodeBase();
