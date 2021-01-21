@@ -9,9 +9,8 @@ uses
 	ide,
 	plugin\ftp,
 	Sql,
-	Skeleton,
 	Painter,
-	Skylark;
+	VirtualGui/Nil;
 
 options(GCC) -DNOWSTRING;
 

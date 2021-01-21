@@ -6,6 +6,7 @@ struct UppHubNest : Moveable<UppHubNest> {
 	int              tier = -1;
 	String           name;
 	Vector<String>   packages;
+	Vector<String>   uses;
 	String           description;
 	String           repo;
 	String           status = "unknown";
@@ -19,6 +20,7 @@ struct UppHubDlg : WithUppHubLayout<TopWindow> {
 	Index<String> loaded;
 	Progress pi;
 	bool loading_stopped;
+	String last_package;
 
 	void Readme();
 	void Load(int tier, const String& url, bool deep);
@@ -26,8 +28,11 @@ struct UppHubDlg : WithUppHubLayout<TopWindow> {
 	void Install(bool noprompt = false);
 	void Uninstall(bool noprompt = false);
 	void Reinstall();
-	void Install(const Index<int>& ii);
+	void Install(const Index<String>& ii);
 	void SyncList();
+	
+	UppHubNest *Get(const String& name) { return upv.FindPtr(name); }
+	UppHubNest *Current()               { return Get(list.GetKey()); }
 
 	UppHubDlg();
 };
@@ -47,8 +52,9 @@ UppHubDlg::UppHubDlg()
 	
 	list.AddIndex("REPO");
 	list.AddIndex("README");
+	list.AddIndex("USES");
 	
-	list.ColumnWidths("94 72 373 301 61 61");
+	list.ColumnWidths("94 72 373 251 119 53");
 	list.WhenSel = [=] {
 		action.Disable();
 		readme.Disable();
@@ -66,7 +72,9 @@ UppHubDlg::UppHubDlg()
 				action ^= [=] { Uninstall(); };
 			}
 		}
-		readme.Enable(!IsNull(list.Get("README")));
+		readme.Enable(list.IsCursor() && !IsNull(list.Get("README")));
+		UppHubNest *n = Current();
+		last_package = n && n->packages.GetCount() ? n->packages[0] : String();
 	};
 	list.WhenLeftDouble = [=] { Readme(); };
 	readme << [=] { Readme(); };
@@ -83,10 +91,11 @@ UppHubDlg::UppHubDlg()
 
 void UppHubDlg::Readme()
 {
-	String link = list.Get("README");
-	String s = HttpRequest(link).RequestTimeout(3000).Execute();
+	UppHubNest *n = Current();
+	if(!n) return;
+	String s = HttpRequest(n->readme).RequestTimeout(3000).Execute();
 	if(s.GetCount()) {
-		if(link.EndsWith(".qtf"))
+		if(n->readme.EndsWith(".qtf"))
 			PromptOK(s);
 		else
 			PromptOK("\1" + s);
@@ -139,12 +148,15 @@ void UppHubDlg::Load(int tier, const String& url, bool deep)
 		String list_name = v["name"];
 		for(Value ns : v["nests"]) {
 			String name = ns["name"];
-			UppHubNest& n = upv.GetAdd(ns["name"]);
+			UppHubNest& n = upv.GetAdd(name);
 			n.name = name;
 			bool tt = tier > n.tier;
 			if(tt || n.packages.GetCount() == 0)
 				for(Value p : ns["packages"])
 					n.packages.Add(p);
+			if(tt || n.uses.GetCount() == 0)
+				for(Value p : ns["uses"])
+					n.uses.Add(p);
 			auto Attr = [&](String& a, const char *id) {
 				if(tt || IsNull(a))
 					a = ns[id];
@@ -200,21 +212,26 @@ void UppHubDlg::Load()
 	pi.Close();
 }
 
-void UppHubDlg::Install(const Index<int>& ii)
+void UppHubDlg::Install(const Index<String>& ii_)
 {
+	Index<String> ii = clone(ii_);
+	for(int i = 0; i < ii.GetCount(); i++)
+		if(UppHubNest *n = Get(ii[i]))
+			for(String s : n->uses)
+				ii.FindAdd(s);
+
 	UrepoConsole console;
 	if(ii.GetCount()) {
-		for(int i : ii) {
-			String n = list.Get(i, 0);
-			if(n.GetCount()) {
+		for(String ns : ii) {
+			UppHubNest *n = Get(ns);
+			if(n) {
 				String cmd = "git clone ";
-				String repo = list.Get(i, "REPO");
 				String repo2, branch;
-				if(SplitTo(repo, ' ', repo2, branch))
+				if(SplitTo(n->repo, ' ', repo2, branch))
 					cmd << "-b " + branch + " " + repo2;
 				else
-					cmd << repo;
-				cmd << ' ' << GetHubDir() << '/' << n;
+					cmd << n->repo;
+				cmd << ' ' << GetHubDir() << '/' << n->name;
 				console.System(cmd);
 			}
 		}
@@ -227,14 +244,10 @@ void UppHubDlg::Install(const Index<int>& ii)
 void UppHubDlg::Install(bool noprompt)
 {
 	if(list.IsCursor() && (noprompt || PromptYesNo("Install " + ~list.GetKey() + "?"))) {
-		Index<int> h;
-		h << list.GetCursor();
-		Install(h);
+		Install(Index<String>{ ~list.GetKey() });
 		SyncList();
 	}
 }
-
-
 
 void UppHubDlg::Uninstall(bool noprompt)
 {
@@ -253,11 +266,12 @@ void UppHubDlg::Reinstall()
 	}
 }
 
-void UppHub()
+String UppHub()
 {
 	UppHubDlg dlg;
 	dlg.Load();
 	dlg.Run();
+	return dlg.last_package;
 }
 
 void UppHubAuto(const String& main)
@@ -279,14 +293,11 @@ void UppHubAuto(const String& main)
 
 		UppHubDlg dlg;
 		dlg.Load();
-		Index<int> found;
+		Index<String> found;
 		for(const UppHubNest& n : dlg.upv)
 			for(const String& p : n.packages)
-				if(missing.Find(p) >= 0) {
-					int i = dlg.list.Find(n.name);
-					if(i >= 0)
-						found.FindAdd(i);
-				}
+				if(missing.Find(p) >= 0)
+					found.FindAdd(n.name);
 
 		if(found.GetCount() == missing.GetCount() && missing != pmissing &&
 		   (noprompt || PromptYesNo("Missing packages were found in UppHub. Install?"))) {

@@ -917,7 +917,6 @@ public:
 		void  Preprocess(bool asmout);
 		void  ToggleStopOnErrors();
 		void  CreateHostRunDir(Host& h);
-		void  OpenOutputFolder();
 		void  PreprocessInternal();
 
 	void      DebugMenu(Bar& menu);
@@ -1264,8 +1263,8 @@ void InstantSetup();
 
 bool SetupSVNTrunk();
 
-void UppHub();
-void UppHubAuto(const String& s);
+String UppHub();
+void   UppHubAuto(const String& s);
 
 #include "urepo.h"
 

@@ -391,7 +391,7 @@ void Ide::Setup(Bar& menu)
 	    .Help("Setups/fixes build methods and basic assemblies..");
 #endif
 	menu.MenuSeparator();
-	menu.Add(HasGit(), "UppHub..", [] { UppHub(); });
+	menu.Add(HasGit(), "UppHub..", IdeImg::UppHub(), [] { UppHub(); });
 	menu.Add("Checkout and setup U++ SVN trunk sources..", [=] {
 		if(SetupSVNTrunk()) {
 			IdeAgain = true;
@@ -740,8 +740,10 @@ void Ide::BuildMenu(Bar& menu)
 	menu.Add(ffb, AK_FINDPREVERROR, THISBACK(FindPrevError))
 		.Help("Find previous " + hh + "according to console pane");
 	menu.MenuSeparator();
-	menu.Add(!IsNull(target), AK_OPENOUTDIR, THISBACK(OpenOutputFolder));
-	menu.Add(!IsNull(target), "Terminal at output directory", [=] { LaunchTerminal(GetFileFolder(target)); });
+	menu.Add(!IsNull(target), AK_OPENOUTDIR, [=] { ShellOpenFolder(GetFileFolder(target)); });
+	menu.Add(!IsNull(target), AK_COPYOUTDIR, [=] { WriteClipboardText(GetFileFolder(target)); });
+	menu.Add(!IsNull(target), AK_COPYTARGET, [=] { WriteClipboardText(target); });
+	menu.Add(!IsNull(target), AK_OUTDIRTERMINAL, [=] { LaunchTerminal(GetFileFolder(target)); });
 }
 
 void Ide::DebugMenu(Bar& menu)
