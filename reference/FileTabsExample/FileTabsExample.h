@@ -11,9 +11,9 @@ using namespace Upp;
 class FileTabsExample : public WithFileTabsExampleLayout<TopWindow> {
 private:
 	FileTabs bar[4];
-	String barbackup;	
+	String barbackup;
+
 public:
-	typedef FileTabsExample CLASSNAME;
 	FileTabsExample();
 	
 	// TabBar events

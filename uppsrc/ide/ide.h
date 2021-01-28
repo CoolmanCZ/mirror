@@ -1160,8 +1160,6 @@ public:
 	void      RefreshFrame(bool auto_disasm);
 	void      RefreshLine(int frame, bool auto_disasm);
 
-	void      ResolveUvsConflict();
-
 	void      SetBar();
 	void      SetMenuBar();
 	void      SetToolBar();

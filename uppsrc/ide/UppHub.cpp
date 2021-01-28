@@ -1,7 +1,5 @@
 #include "ide.h"
 
-// Todo: other folders in UppHub
-
 struct UppHubNest : Moveable<UppHubNest> {
 	int              tier = -1;
 	String           name;
@@ -22,14 +20,15 @@ struct UppHubDlg : WithUppHubLayout<TopWindow> {
 	bool loading_stopped;
 	String last_package;
 
-	void Readme();
-	void Load(int tier, const String& url, bool deep);
-	void Load();
-	void Install(bool noprompt = false);
-	void Uninstall(bool noprompt = false);
-	void Reinstall();
-	void Install(const Index<String>& ii);
-	void SyncList();
+	void  Readme();
+	Value LoadJson(const String& url);
+	void  Load(int tier, const String& url);
+	void  Load();
+	void  Install(bool noprompt = false);
+	void  Uninstall(bool noprompt = false);
+	void  Reinstall();
+	void  Install(const Index<String>& ii);
+	void  SyncList();
 	
 	UppHubNest *Get(const String& name) { return upv.FindPtr(name); }
 	UppHubNest *Current()               { return Get(list.GetKey()); }
@@ -87,6 +86,8 @@ UppHubDlg::UppHubDlg()
 		SaveFile(ConfigFile("upphub_root"), s);
 		Load();
 	};
+	
+	help << [=] { LaunchWebBrowser("https://www.ultimatepp.org/app$ide$UppHub_en-us.html"); };
 }
 
 void UppHubDlg::Readme()
@@ -102,13 +103,8 @@ void UppHubDlg::Readme()
 	}
 }
 
-void UppHubDlg::Load(int tier, const String& url, bool deep)
+Value UppHubDlg::LoadJson(const String& url)
 {
-	if(loaded.Find(url) >= 0)
-		return;
-	loaded.Add(url);
-	
-	
 	String s = LoadFile(url);
 	
 	if(IsNull(s)) {
@@ -126,7 +122,7 @@ void UppHubDlg::Load(int tier, const String& url, bool deep)
 		r.Execute();
 		
 		if(loading_stopped)
-			return;
+			return ErrorValue();
 	
 		s = r.GetContent();
 	}
@@ -136,6 +132,7 @@ void UppHubDlg::Load(int tier, const String& url, bool deep)
 	
 	if(begin >= 0 && end >= 0)
 		s = s.Mid(begin, end - begin);
+	
 
 	Value v = ParseJSON(s);
 	if(v.IsError()) {
@@ -143,10 +140,24 @@ void UppHubDlg::Load(int tier, const String& url, bool deep)
 		s.Replace("&amp;", "&");
 		v = ParseJSON(s);
 	}
+	return v;
+}
+
+void UppHubDlg::Load(int tier, const String& url)
+{
+	if(loaded.Find(url) >= 0)
+		return;
+	loaded.Add(url);
+	
+	Value v = LoadJson(url);
+	
 
 	try {
 		String list_name = v["name"];
 		for(Value ns : v["nests"]) {
+			String url = ns["url"];
+			if(url.GetCount())
+				ns = LoadJson(url);
 			String name = ns["name"];
 			UppHubNest& n = upv.GetAdd(name);
 			n.name = name;
@@ -168,16 +179,10 @@ void UppHubDlg::Load(int tier, const String& url, bool deep)
 			Attr(n.readme, "readme");
 			n.list_name = list_name;
 		}
-		if(deep)
-			for(Value l : v["links"]) {
-				if(loading_stopped)
-					break;
-				Load(tier + 1, l, true);
-			}
-		for(Value l : v["refs"]) {
+		for(Value l : v["links"]) {
 			if(loading_stopped)
 				break;
-			Load(tier + 1, l, false);
+			Load(tier + 1, l);
 		}
 	}
 	catch(ValueTypeError) {}
@@ -204,8 +209,7 @@ void UppHubDlg::Load()
 	upv.Clear();
 
 	Load(0, Nvl(LoadFile(ConfigFile("upphub_root")),
-	            "https://raw.githubusercontent.com/ultimatepp/ultimatepp/master/upphub.root"),
-	     true);
+	            "https://raw.githubusercontent.com/ultimatepp/ultimatepp/master/upphub.root"));
 
 	SyncList();
 
