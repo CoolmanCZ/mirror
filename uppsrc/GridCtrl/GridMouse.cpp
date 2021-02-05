@@ -112,7 +112,7 @@ void GridCtrl::LeftDown(Point p, dword keyflags)
 		moveCol = curpos.x;
 		moveRow = curpos.y;
 
-		if(keyflags & K_CTRL) {
+		if((keyflags & K_CTRL) && multi_select) {
 			SelectRange(curpos, curpos, !IsSelect(curpos.y, curpos.x, false), select_row);
 		}
 		else {
@@ -490,7 +490,7 @@ void GridCtrl::LeftUp(Point p, dword keyflags)
 		return;
 	}
 	
-	if(IsValidCursor(anchor) && IsValidCursor(curpos))
+	if(IsValidCursor(anchor) && IsValidCursor(curpos) && multi_select)
 		SelectRange(Rect(anchor, curpos), true, select_row);
 	
 	anchor = curpos;

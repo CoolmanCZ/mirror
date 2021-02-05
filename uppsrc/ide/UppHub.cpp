@@ -98,6 +98,8 @@ void UppHubDlg::Readme()
 	if(s.GetCount()) {
 		if(n->readme.EndsWith(".qtf"))
 			PromptOK(s);
+		if(n->readme.EndsWith(".md"))
+			PromptOK(MarkdownConverter().Tables().ToQtf(s));
 		else
 			PromptOK("\1" + s);
 	}
@@ -209,7 +211,7 @@ void UppHubDlg::Load()
 	upv.Clear();
 
 	Load(0, Nvl(LoadFile(ConfigFile("upphub_root")),
-	            "https://raw.githubusercontent.com/ultimatepp/ultimatepp/master/upphub.root"));
+	            "https://raw.githubusercontent.com/ultimatepp/UppHub/main/nests.json"));
 
 	SyncList();
 

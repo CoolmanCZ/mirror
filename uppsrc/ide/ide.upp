@@ -21,7 +21,8 @@ uses
 	ide/MacroManager,
 	ugit,
 	Report,
-	Core/SSL;
+	Core/SSL,
+	plugin/md;
 
 file
 	IDE readonly separator,

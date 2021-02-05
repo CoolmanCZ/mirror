@@ -18,6 +18,7 @@
 #include <TextDiffCtrl/TextDiffCtrl.h>
 #include <ide/Designers/Designers.h>
 #include <ide/Android/Android.h>
+#include <plugin/md/Markdown.h>
 
 #include "About.h"
 #include "MethodsCtrls.h"

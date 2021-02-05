@@ -846,7 +846,6 @@ public:
 	operator std::wstring() const;
 	std::wstring ToStd() const                              { return std::wstring(Begin(), End()); }
 #endif
-
 };
 
 #ifndef _HAVE_NO_STDWSTRING
@@ -936,6 +935,8 @@ template<> inline String AsString(const char& a)            { return String(a, 1
 template<> inline String AsString(const signed char& a)     { return String(a, 1); }
 template<> inline String AsString(const unsigned char& a)   { return String(a, 1); }
 template<> inline String AsString(const bool& a)            { return a ? "true" : "false"; }
+template<> inline String AsString(const std::string& s)     { return String(s); }
+template<> inline String AsString(const std::wstring& s)    { return WString(s).ToString(); }
 
 unsigned ctoi(int c);
 
