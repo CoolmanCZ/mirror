@@ -88,8 +88,8 @@
 	#include <signal.h>
 	#include <syslog.h>
 	#include <float.h>
- 	#include <fenv.h>
- 	#ifdef PLATFORM_SOLARIS
+	#include <fenv.h>
+	#ifdef PLATFORM_SOLARIS
 		#include <inttypes.h>
 	#else
 		#include <stdint.h>
@@ -283,6 +283,10 @@ class JsonIO;
 	#ifdef CPU_NEON
 	#undef CPU_NEON
 	#endif
+#endif
+
+#if defined(CPU_SSE2) && defined(CPU_32) && defined(PLATFORM_POSIX)
+#undef CPU_SSE2
 #endif
 
 #ifdef CPU_SSE2

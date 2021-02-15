@@ -46,6 +46,7 @@ public:
 	virtual void   LeftUp(Point pt, dword keyflags);
 	virtual void   RightDown(Point p, dword keyflags);
 	virtual bool   Key(dword key, int repcnt);
+	virtual void   LostFocus();
 
 private:
 	void           SelfScroll();
@@ -53,7 +54,7 @@ private:
 	void           UpdateWidth();
 	WString        ExpandTabs(const wchar *line) const;
 	int            MeasureLength(const wchar *line) const;
-	bool           GetSelection(int& l, int& h);
+	bool           GetSelection(int& l, int& h) const;
 	void           DoSelection(int y, bool shift);
 	void           Copy();
 	int            GetLineNo(int y, int& yy);
@@ -100,6 +101,7 @@ private:
 	typedef TextCompareCtrl CLASSNAME;
 
 public:
+	Event<>        WhenSel;
 	Event<>        WhenScroll;
 	Callback2<int, int> WhenLeftDouble;
 	Event<Vector<LineEdit::Highlight>&, const WString&> WhenHighlight;
@@ -136,6 +138,7 @@ public:
 	bool           GetDiff(int line) const { return lines[line].diff; }
 	int            GetNumber(int line) const { return lines[line].number; }
 	int            GetNumberDiff(int line) const { return lines[line].number_diff; }
+	bool           HasLine(int line) const { return !IsNull(lines[line].number); }
 
 	Point          GetPos() const;
 	void           SetPos(Point pos);
@@ -143,8 +146,10 @@ public:
 	int            GetSb() const { return scroll.Get().y; }
 	void           SetSb(int y)  { scroll.Set(0, y); }
 
-	void           ClearSelection()           { cursor = Null; Refresh(); }
-	void           SetSelection(int l, int h) { cursor = l; anchor = h; }
+	void           ClearSelection()           { cursor = Null; Refresh(); WhenSel(); }
+	void           SetSelection(int l, int h) { cursor = l; anchor = h; Refresh(); WhenSel(); }
+	bool           IsSelection() const        { return cursor >= 0; }
+	bool           IsSelected(int i) const;
 
 	void           ShowLineNumber(bool sln)   { show_line_number = sln; Refresh(); }
 	void           HideLineNumber()           { ShowLineNumber(false); }
@@ -159,6 +164,8 @@ public:
 	void           NoChangePaperColor()       { ChangePaperColor(false); }
 
 	void           SetLeft()                  { left = true; }
+	
+	String         RemoveSelected(bool cr);
 
 	Event<>        ScrollWhen(TextCompareCtrl& pair) { return THISBACK1(PairScroll, &pair); }
 
@@ -183,6 +190,11 @@ struct TextDiffCtrl : public Splitter {
 	void GetLeftLine(int number, int line);
 	void GetRightLine(int number, int line);
 
+	String Merge(bool l, bool cr);
+	
+	int  GetSc() const                                     { return left.GetSb(); }
+	void Sc(int sc)                                        { left.SetSb(sc); }
+
 	Callback1<int> WhenLeftLine;
 	Callback1<int> WhenRightLine;
 
@@ -190,15 +202,21 @@ struct TextDiffCtrl : public Splitter {
 };
 
 struct DiffDlg : public TopWindow {
+	bool Key(dword key, int count) override;
+
 	TextDiffCtrl         diff;
 	FrameTop<StaticRect> p;
 	DataPusher           l;
 	Button               write;
+	Button               revert;
+	Button               remove;
 	String               editfile;
+	String               backup;
 	String               extfile;
 
 	typedef DiffDlg CLASSNAME;
 
+	void Refresh();
 	void Write();
 	void Execute(const String& f);
 
@@ -206,6 +224,8 @@ struct DiffDlg : public TopWindow {
 
 	DiffDlg();
 };
+
+bool HasCrs(const String& path);
 
 FileSel& DiffFs();
 
@@ -229,8 +249,9 @@ struct FileDiff : DiffDlg {
 class DirDiffDlg : public TopWindow {
 public:
 	virtual bool HotKey(dword key);
+	virtual bool Key(dword key, int count);
 
-private:
+protected:
 	Splitter                   files_diff;
 	ParentCtrl                 files_pane;
 	FileList                   files;
@@ -251,6 +272,10 @@ private:
 	FrameTop<ParentCtrl>       left, right;
 	EditString                 lfile, rfile;
 	Button                     copyleft, copyright;
+	Button                     revertleft, revertright;
+	Button                     removeleft, removeright;
+	
+	VectorMap<String, String>  backup;
 	
 	enum { NORMAL_FILE, DELETED_FILE, NEW_FILE, FAILED_FILE, PATCHED_FILE };
 	
@@ -262,7 +287,9 @@ private:
 	void Compare();
 	void ShowResult();
 	void ClearFiles();
-	void File();
+	virtual void File();
+	void Refresh();
+	void Backup(const String& path);
 	void Copy(bool left);
 	FileList::File MakeFile(int i);
 	
@@ -314,7 +341,7 @@ public:
 	String GetFile(int i) const        { return file.GetKey(i); }
 	String GetPath(int i) const        { return AppendFileName(target_dir, file.GetKey(i)); }
 	String GetPatch(int i) const;
-	String GetPatchedFile(int i) const;
+	String GetPatchedFile(int i, const String& file) const;
 };
 
 class PatchDiff : public DirDiffDlg {
@@ -332,6 +359,7 @@ class PatchDiff : public DirDiffDlg {
 	int             failed_count = 0;
 	
 	void File();
+	String GetBackup(const String& path);
 	int  GetFileIndex() const;
 
 public:

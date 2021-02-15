@@ -104,8 +104,10 @@ void MakeBuild::CreateHost(Host& host, bool darkmode, bool disable_uhd)
 		String p = GetExeDirFile("bin/mingit/cmd");
 		if(FileExists(p + "/git.exe"))
 			host.exedirs.Add(p);
-#endif
 		env.GetAdd("PATH") = Join(host.exedirs, ";");
+#else
+		env.GetAdd("PATH") = Join(host.exedirs, ":");
+#endif
 		env.GetAdd("UPP_MAIN__") = GetFileDirectory(PackagePath(GetMain()));
 		env.GetAdd("UPP_ASSEMBLY__") = GetVar("UPP");
 		if(disable_uhd)
@@ -119,6 +121,9 @@ void MakeBuild::CreateHost(Host& host, bool darkmode, bool disable_uhd)
 			String ldPath = GetFileFolder(target) + ";" + env.Get("LD_LIBRARY_PATH", "");
 			env.GetAdd("LD_LIBRARY_PATH") = ldPath;
 		}
+#endif
+#ifdef PLATFORM_COCOA
+		host.exedirs.Append(SplitDirs("/opt/local/bin:/opt/local/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin")); // sometimes some of these are missing..
 #endif
 		for(int i = 0; i < env.GetCount(); i++) {
 			LDUMP(env.GetKey(i));
