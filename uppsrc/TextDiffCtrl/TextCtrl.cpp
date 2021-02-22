@@ -2,6 +2,8 @@
 
 namespace Upp {
 
+inline Color HistoryBg() { return Color(255, 255, 0); }
+
 TextCompareCtrl::TextCompareCtrl()
 {
 	letter = Size(1, 1);

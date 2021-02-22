@@ -516,6 +516,7 @@ void Ide::Project(Bar& menu)
 		if(menu.IsMenuBar())
 			menu.Add(AK_MAINCONFIG, IdeImg::main_package(), THISBACK(MainConfig))
 				.Help("Configuring compiler, operating system, output application parameters, custom flags");
+		menu.Add("Merge nests..", [=] { MergeNests(); });
 		menu.Separator();
 		menu.Add(AK_SYNCT, IdeImg::Language(), THISBACK1(SyncT, 0))
 		    .Help("Synchronize all language translation files of current workspace");
@@ -531,6 +532,13 @@ void Ide::Project(Bar& menu)
 	if(!IsEditorMode()) {
 		menu.MenuSeparator();
 		if(repo_dirs) {
+			String pp = GetActivePackagePath();
+			menu.AddMenu(FileExists(pp) && editfile_repo,
+			             (editfile_repo == SVN_DIR ? "Show svn history of " : "Show git history of ") + GetFileName(pp),
+			             IdeImg::SvnDiff(), [=] {
+				if(FileExists(pp))
+					RunRepoDiff(pp);
+			});
 			if(menu.IsMenuBar())
 				menu.Add("Repo", THISBACK(ProjectRepo));
 			else
@@ -564,9 +572,11 @@ void Ide::FilePropertiesMenu(Bar& menu)
 	             AK_DIFFLOG, IdeImg::DiffLog(), [=] { DiffWith(GetTargetLogPath()); })
 	    .Help("Show differences between the current and the log");
 	if(editfile_repo) {
-		String txt = String("Show ") + (editfile_repo == SVN_DIR ? "svn" : "git") + " history of file";
-		menu.AddMenu(candiff, AK_SVNDIFF, IdeImg::SvnDiff(), THISBACK(SvnHistory))
-		    .Text(txt + "..").Help(txt);
+		String txt = String("Show ") + (editfile_repo == SVN_DIR ? "svn" : "git") + " history of ";
+		menu.AddMenu(candiff, AK_SVNDIFF, IdeImg::SvnDiff(), [=] {
+			if(!IsNull(editfile))
+				RunRepoDiff(editfile);
+		}).Text(txt + "file..");
 		if(editfile.GetCount()) {
 			String mine;
 			String theirs;
@@ -702,6 +712,8 @@ void Ide::BuildMenu(Bar& menu)
 	b = b && idestate == EDITING;
 	menu.Add(b, AK_CLEAN, THISBACK(Clean))
 		.Help("Remove all intermediate files");
+//	menu.Add("Reset BLITZ", [=] { ResetBlitz(); })
+//	    .Help("All files will be considered for BLITZ, regardless of time");
 	menu.Add(b, AK_REBUILDALL, IdeImg::build_rebuild_all(), THISBACK(RebuildAll))
 		.Help("Remove all intermediate files & build");
 	menu.Add(b, AK_CLEANUPPOUT, THISBACK(CleanUppOut))

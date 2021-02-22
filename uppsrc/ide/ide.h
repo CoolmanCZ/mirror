@@ -823,8 +823,6 @@ public:
 		String LoadConflictFile(const String& n);
 		void   GotoDiffLeft(int line, DiffDlg *df);
 		void   GotoDiffRight(int line, FileDiff *df);
-		void   Patch();
-		void   SvnHistory();
 
 	void      Edit(Bar& menu);
 		bool  IsDesignerFile(const String& path);
@@ -903,6 +901,7 @@ public:
 		void  SyncRepoDirs(const Vector<String>& working);
 		void  SyncRepoDir(const String& working);
 		void  SyncRepo();
+		void  MergeNests();
 
 	void      BuildMenu(Bar& menu);
 		void BuildPackageMenu(Bar& menu);

@@ -10,6 +10,7 @@ struct UppHubNest : Moveable<UppHubNest> {
 	String           category;
 	String           list_name;
 	String           readme;
+	String           branch;
 };
 
 struct UppHubDlg : WithUppHubLayout<TopWindow> {
@@ -19,6 +20,8 @@ struct UppHubDlg : WithUppHubLayout<TopWindow> {
 	bool loading_stopped;
 	String last_package;
 
+	WithUppHubSettingsLayout<TopWindow> settings;
+
 	void  Readme();
 	Value LoadJson(const String& url);
 	void  Load(int tier, const String& url);
@@ -27,7 +30,9 @@ struct UppHubDlg : WithUppHubLayout<TopWindow> {
 	void  Uninstall(bool noprompt = false);
 	void  Reinstall();
 	void  Install(const Index<String>& ii);
+	void  Update();
 	void  SyncList();
+	void  Settings();
 	
 	UppHubNest *Get(const String& name) { return upv.FindPtr(name); }
 	UppHubNest *Current()               { return Get(list.GetKey()); }
@@ -38,11 +43,14 @@ struct UppHubDlg : WithUppHubLayout<TopWindow> {
 UppHubDlg::UppHubDlg()
 {
 	CtrlLayoutCancel(*this, "UppHub");
+
+	CtrlLayoutOKCancel(settings, "Settings");
+	FileSelectOpen(settings.url, settings.selfile);
 	
 	list.EvenRowColor();
 
-	list.AddColumn("Name");
-	list.AddColumn("Category");
+	list.AddColumn("Name").Sorting();
+	list.AddColumn("Category").Sorting();
 	list.AddColumn("Description");
 	list.AddColumn("Packages");
 	list.AddColumn("Status");
@@ -78,15 +86,31 @@ UppHubDlg::UppHubDlg()
 	readme << [=] { Readme(); };
 	reinstall << [=] { Reinstall(); };
 	
-	settings.Show(IsVerbose());
-	settings << [=] {
-		String s = LoadFile(ConfigFile("upphub_root"));
-		EditText(s, "UppHub root", "Root url");
-		SaveFile(ConfigFile("upphub_root"), s);
-		Load();
+	setup << [=] {
+		Settings();
 	};
 	
+	update << [=] { Update(); };
+	
 	help << [=] { LaunchWebBrowser("https://www.ultimatepp.org/app$ide$UppHub_en-us.html"); };
+	
+	search.NullText("Search");
+	search.SetFilter([](int c) { return (int)ToUpper(ToAscii(c)); });
+	search << [=] { SyncList(); };
+
+	LoadFromGlobal(settings, "UppHubDlgSettings");
+}
+
+INITBLOCK {
+	RegisterGlobalConfig("UppHubDlgSettings");
+}
+
+void UppHubDlg::Settings()
+{
+	if(settings.Execute() == IDOK) {
+		StoreToGlobal(settings, "UppHubDlgSettings");
+		Load();
+	}
 }
 
 void UppHubDlg::Readme()
@@ -133,7 +157,6 @@ Value UppHubDlg::LoadJson(const String& url)
 	
 	if(begin >= 0 && end >= 0)
 		s = s.Mid(begin, end - begin);
-	
 
 	Value v = ParseJSON(s);
 	if(v.IsError()) {
@@ -151,7 +174,6 @@ void UppHubDlg::Load(int tier, const String& url)
 	loaded.Add(url);
 	
 	Value v = LoadJson(url);
-	
 
 	try {
 		String list_name = v["name"];
@@ -175,6 +197,8 @@ void UppHubDlg::Load(int tier, const String& url)
 			Attr(n.category, "category");
 			Attr(n.status, "status");
 			Attr(n.readme, "readme");
+			Attr(n.branch, "branch");
+
 			n.list_name = list_name;
 		}
 		for(Value l : v["links"]) {
@@ -191,10 +215,15 @@ void UppHubDlg::SyncList()
 	int sc = list.GetScroll();
 	Value k = list.GetKey();
 	list.Clear();
-	for(const UppHubNest& n : upv)
-		list.Add(n.name, n.category, n.description, Join(n.packages, " "), n.status,
-		         DirectoryExists(GetHubDir() + "/" + n.name) ? "Yes" : "",
-		         n.repo, n.readme);
+	for(const UppHubNest& n : upv) {
+		String pkgs = Join(n.packages, " ");
+		if(ToUpperAscii(n.name + n.category + n.description + pkgs).Find(~~search) >= 0)
+			list.Add(n.name, n.category, n.description, pkgs, n.status,
+			         DirectoryExists(GetHubDir() + "/" + n.name) ? "Yes" : "",
+			         n.repo, n.readme);
+	}
+		         
+	list.DoColumnSort();
 	list.ScrollTo(sc);
 	if(!list.FindSetCursor(k))
 		list.GoBegin();
@@ -206,12 +235,29 @@ void UppHubDlg::Load()
 	loaded.Clear();
 	upv.Clear();
 
-	Load(0, Nvl(LoadFile(ConfigFile("upphub_root")),
-	            "https://raw.githubusercontent.com/ultimatepp/UppHub/main/nests.json"));
+	String url = Nvl(LoadFile(ConfigFile("upphub_root")),
+	                 (String)"https://raw.githubusercontent.com/ultimatepp/UppHub/main/nests.json");
+
+	if(settings.seturl)
+		url = ~settings.url;
+
+	Load(0, url);
 
 	SyncList();
 
 	pi.Close();
+}
+
+void UppHubDlg::Update()
+{
+	if(!PromptYesNo("Pull updates for all modules?"))
+		return;
+	UrepoConsole console;
+	for(const UppHubNest& n : upv) {
+		String dir = GetHubDir() + "/" + n.name;
+		if(DirectoryExists(dir))
+			console.Git(dir, "pull --ff-only");
+	}
 }
 
 void UppHubDlg::Install(const Index<String>& ii_)
@@ -227,16 +273,14 @@ void UppHubDlg::Install(const Index<String>& ii_)
 				String dir = GetHubDir() + '/' + n->name;
 				if(!DirectoryExists(dir)) {
 					String cmd = "git clone ";
-					String repo2, branch;
-					if(SplitTo(n->repo, ' ', repo2, branch))
-						cmd << "-b " + branch + " " + repo2;
-					else
-						cmd << n->repo;
+					if(n->branch.GetCount())
+						cmd << "-b " + n->branch << ' ';
+					cmd << n->repo;
 					cmd << ' ' << dir;
 					console.System(cmd);
-					for(String p : n->packages) {
+					for(String p : FindAllPaths(dir, "*.upp")) {
 						Package pkg;
-						pkg.Load(dir + '/' + p + '/' + p + ".upp");
+						pkg.Load(p);
 						for(const auto& u : pkg.uses)
 							for(const UppHubNest& n : upv)
 								for(const String& p : n.packages)
@@ -252,6 +296,7 @@ void UppHubDlg::Install(const Index<String>& ii_)
 		console.Perform();
 		InvalidatePackageCache();
 	}
+	ResetBlitz();
 }
 
 void UppHubDlg::Install(bool noprompt)

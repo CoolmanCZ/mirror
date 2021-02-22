@@ -99,6 +99,8 @@ private:
 	bool           left = false;
 
 	typedef TextCompareCtrl CLASSNAME;
+	
+	friend class TextDiffCtrl;
 
 public:
 	Event<>        WhenSel;
@@ -175,8 +177,11 @@ public:
 struct TextDiffCtrl : public Splitter {
 	TextCompareCtrl left;
 	TextCompareCtrl right;
+	FrameTop<Button> next, prev;
 
 	typedef TextDiffCtrl CLASSNAME;
+	
+	virtual bool Key(dword key, int count);
 
 	void Set(Stream& l, Stream& r);
 	void Set(const String& l, const String& r);
@@ -189,6 +194,8 @@ struct TextDiffCtrl : public Splitter {
 
 	void GetLeftLine(int number, int line);
 	void GetRightLine(int number, int line);
+	
+	void FindDiff(bool fw);
 
 	String Merge(bool l, bool cr);
 	
@@ -255,6 +262,7 @@ protected:
 	Splitter                   files_diff;
 	ParentCtrl                 files_pane;
 	FileList                   files;
+	DropList                   recent;
 
 	SelectDirButton            seldir1;
 	WithDropChoice<EditString> dir1;
@@ -263,8 +271,7 @@ protected:
 	Option                     hidden;
 	Option                     split_lines;
 	Button                     compare;
-	Label                      info;
-
+	
 	Option                     removed, added, modified;
 	EditString				   find;
 	Button					   clearFind;
