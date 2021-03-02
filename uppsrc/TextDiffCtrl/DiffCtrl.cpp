@@ -206,7 +206,6 @@ void DiffDlg::Refresh()
 
 bool HasCrs(const String& path)
 {
-	bool cr = false;
 	FileIn in(path);
 	if(in) {
 		while(!in.IsEof()) {

@@ -1,11 +1,11 @@
 uses
-	CtrlLib;
+	RichText;
 
 file
 	Test.tpp,
-	Etalon.log,
+	test.html,
 	main.cpp;
 
 mainconfig
-	"" = "GUI";
+	"" = "";
 
