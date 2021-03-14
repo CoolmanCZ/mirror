@@ -162,6 +162,7 @@ public:
 	int   GetOverhang() const                { return Fi().overhang; }
 	int   GetAveWidth() const                { return Fi().avewidth; }
 	int   GetMaxWidth() const                { return Fi().maxwidth; }
+	int   GetMonoWidth() const               { return max(GetWidth('M'), GetWidth('W')); }
 	bool  IsNormal(int ch) const;
 	bool  IsComposed(int ch) const;
 	bool  IsReplaced(int ch) const;
@@ -954,9 +955,15 @@ void DrawXPButton(Draw& w, Rect r, int type);
 struct PdfSignatureInfo;
 typedef String (*DrawingToPdfFnType)(const Array<Drawing>& report, Size pagesize, int margin,
                                      bool pdfa, const PdfSignatureInfo *sign);
+typedef void (*PdfDrawJPEGFnType)(Draw& w, int x, int y, int cx, int cy, const String& jpeg_data);
 
-void SetDrawingToPdfFn(DrawingToPdfFnType Pdf);
+void SetDrawingToPdfFn(DrawingToPdfFnType Pdf, PdfDrawJPEGFnType Jpeg);
 DrawingToPdfFnType GetDrawingToPdfFn();
+PdfDrawJPEGFnType GetPdfDrawJPEGFn();
+
+typedef bool (*IsJPGFnType)(StreamRaster *s);
+void SetIsJPGFn(IsJPGFnType isjpg);
+IsJPGFnType GetIsJPGFn();
 
 #include "Display.h"
 #include "Cham.h"
