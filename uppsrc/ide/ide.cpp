@@ -130,6 +130,7 @@ void Ide::SetMain(const String& package)
 	SetBar();
 	HideBottom();
 	SyncUsc();
+	InvalidateIncludes();
 	if(auto_check)
 		NewCodeBase();
 	if(IsNull(e))
@@ -203,6 +204,7 @@ void Ide::EditWorkspace()
 	EditPackages(main, GetActivePackage(), pocfg);
 	ScanWorkspace();
 	SyncWorkspace();
+	InvalidateIncludes();
 }
 
 String Ide::WorkspaceFile()

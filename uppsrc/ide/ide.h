@@ -901,7 +901,6 @@ public:
 		void  SyncRepoDirs(const Vector<String>& working);
 		void  SyncRepoDir(const String& working);
 		void  SyncRepo();
-		void  MergeNests();
 
 	void      BuildMenu(Bar& menu);
 		void BuildPackageMenu(Bar& menu);
@@ -1055,6 +1054,10 @@ public:
 	String    GetTargetLogPath();
 	String    GetIdeLogPath();
 	void      OpenLog(const String& logFilePath);
+	
+	String    include_path; // cached value of include path, GetIncludePath
+	
+	virtual void      InvalidateIncludes();
 
 	virtual void      LaunchTerminal(const char *dir);
 	
