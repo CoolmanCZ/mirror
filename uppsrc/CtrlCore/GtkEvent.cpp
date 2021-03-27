@@ -377,12 +377,12 @@ bool Ctrl::DispatchMouseIn(int act, int zd)
 	return false;
 }
 
-void Ctrl::GtkMouseEvent(int action, int act, int zd)
+Image Ctrl::GtkMouseEvent(int action, int act, int zd)
 {
 	if(grabpopup && activePopup.GetCount()) {
 		for(int i = visiblePopup.GetCount(); --i >= 0;)
 			if(visiblePopup[i] && visiblePopup[i]->DispatchMouseIn(act, zd))
-				return;
+				return Null;
 		if(action == DOWN) { // Deactivate active popup(s) if clicked outside of active popups
 			IgnoreMouseUp();
 			if(activePopup.Top())
@@ -394,9 +394,9 @@ void Ctrl::GtkMouseEvent(int action, int act, int zd)
 			if(w)
 				w->DispatchMouseIn(act, zd);
 		}
-		return;
+		return Null;
 	}
-	DispatchMouse(act, GetMousePos() - GetScreenRect().TopLeft(), zd);
+	return DispatchMouse(act, GetMousePos() - GetScreenRect().TopLeft(), zd);
 }
 
 void Ctrl::GtkButtonEvent(int action)
@@ -426,13 +426,20 @@ void Ctrl::Proc()
 	int  kv, hw;
 	static int clicktime = msecs() - 100000;
 
-	pen = CurrentEvent.pen;
-	pen_barrel = CurrentEvent.pen_barrel;
-	pen_inverted = CurrentEvent.pen_inverted;
-	pen_eraser = CurrentEvent.pen_eraser;
-	pen_pressure = CurrentEvent.pen_pressure;
-	pen_rotation = CurrentEvent.pen_rotation;
-	pen_tilt = CurrentEvent.pen_tilt;
+	pen.barrel = CurrentEvent.pen_barrel;
+	pen.inverted = CurrentEvent.pen_inverted;
+	pen.eraser = CurrentEvent.pen_eraser;
+	pen.pressure = CurrentEvent.pen_pressure;
+	pen.rotation = CurrentEvent.pen_rotation;
+	pen.tilt = CurrentEvent.pen_tilt;
+	
+	if(CurrentEvent.pen &&
+	   findarg(CurrentEvent.type, GDK_MOTION_NOTIFY, GDK_BUTTON_PRESS, GDK_BUTTON_RELEASE) >= 0)
+	{
+		pen.action = decode(CurrentEvent.type, GDK_BUTTON_PRESS, PEN_DOWN, GDK_BUTTON_RELEASE, PEN_UP, 0);
+		if(!IsNull(GtkMouseEvent(PEN, PEN, 0)))
+			CurrentEvent.type = -99999; // suppres further processing
+	}
 
 	switch(CurrentEvent.type) {
 	case GDK_MOTION_NOTIFY:
