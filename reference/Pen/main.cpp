@@ -8,19 +8,19 @@ struct MyApp : TopWindow {
 	Vector<Vector<Tuple<double, Pointf>>> drawing;
 
 	PenInfo pen;
-	
-	bool Pen(Point p, const PenInfo& pn, dword keyflags) override {
-		if(keyflags & K_SHIFT)
-			return false;
-		if(pn.pressure) {
-			if((!!pn.pressure == !!pen.pressure) && drawing.GetCount())
-				drawing.Top().Add(MakeTuple(pn.pressure, p));
-			else
-				drawing.Add().Add(MakeTuple(pn.pressure, p));
+
+	virtual void MouseMove(Point p, dword keyflags) override {
+		if(keyflags & K_PEN) {
+			PenInfo pn = GetPenInfo();
+			if(pn.pressure) {
+				if((!!pn.pressure == !!pen.pressure) && drawing.GetCount())
+					drawing.Top().Add(MakeTuple(pn.pressure, p));
+				else
+					drawing.Add().Add(MakeTuple(pn.pressure, p));
+			}
+			pen = pn;
 		}
-		pen = pn;
 		Refresh();
-		return true;
 	}
 	
 	void LeftDown(Point p, dword keyflags) override {
@@ -30,9 +30,8 @@ struct MyApp : TopWindow {
 			tracker.Track(Rect(p,p));
 		}
 	}
-
-
-	virtual void Paint(Draw& w0) {
+	
+	virtual void Paint(Draw& w0) override {
 		DrawPainter w(w0, GetSize());
 		w.Co();
 		w.Clear(SColorPaper());
