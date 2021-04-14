@@ -166,8 +166,21 @@ Rect RectTracker::Round(const Rect& r)
 	return rounder ? rounder->Round(h) : h;
 }
 
-void RectTracker::MouseMove(Point mp, dword)
-{
+void  RectTracker::Pen(Point p, const PenInfo &pn, dword keyflags){
+	switch(pn.action){
+		case 0:
+			if(!pn.history) MouseMove(p, keyflags);
+			break;
+		case PEN_DOWN:
+			LeftDown(p, keyflags);
+			break;
+		case PEN_UP:
+			LeftUp(p, keyflags);
+			break;
+	}
+}
+
+void RectTracker::MouseMove(Point mp, dword){
 	Point p = GetMousePos();
 	rect = org;
 	if(tx < 0 && ty < 0) { // free line mode

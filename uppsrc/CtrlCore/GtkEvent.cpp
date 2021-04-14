@@ -284,6 +284,7 @@ void Ctrl::AddEvent(gpointer user_data, int type, const Value& value, GdkEvent *
 	GdkDevice *d = gdk_event_get_source_device(event);
 	if(d && gdk_device_get_source(d) == GDK_SOURCE_PEN) {
 		e.pen = true;
+		e.pen_barrel = MouseState & GDK_BUTTON3_MASK;
 		double *axes = NULL;
 		if(event->type == GDK_MOTION_NOTIFY)
 			axes = ((GdkEventMotion *)event)->axes;
@@ -432,12 +433,32 @@ void Ctrl::Proc()
 	pen.rotation = CurrentEvent.pen_rotation;
 	pen.tilt = CurrentEvent.pen_tilt;
 	
-	if(CurrentEvent.pen &&
+	is_pen_event = CurrentEvent.pen;
+
+	auto DoPen = [&](Point p) {
+		GuiLock __;
+		eventCtrl = this;
+		Ctrl *q = this;
+		if(captureCtrl){
+			q = captureCtrl;
+			p += GetScreenRect().TopLeft() - captureCtrl->GetScreenRect().TopLeft();
+		}
+		else
+			for(Ctrl *t = q; t; t=q->ChildFromPoint(p)) q = t;
+		
+		q->Pen(p, pen, GetMouseFlags());
+		SyncCaret();
+		Image m = CursorOverride();
+		if(IsNull(m)) SetMouseCursor(q->CursorImage(p,GetMouseFlags()));
+		else SetMouseCursor(m);
+	};
+
+	if(is_pen_event &&
 	   findarg(CurrentEvent.type, GDK_MOTION_NOTIFY, GDK_BUTTON_PRESS, GDK_BUTTON_RELEASE) >= 0)
 	{
 		pen.action = decode(CurrentEvent.type, GDK_BUTTON_PRESS, PEN_DOWN, GDK_BUTTON_RELEASE, PEN_UP, 0);
-		if(!IsNull(GtkMouseEvent(PEN, PEN, 0)))
-			CurrentEvent.type = -99999; // suppres further processing
+		
+		DoPen(GetMousePos() - GetScreenRect().TopLeft());
 	}
 
 	switch(CurrentEvent.type) {
@@ -461,9 +482,12 @@ void Ctrl::Proc()
 			ignoreclick = false;
 			ignoremouseup = false;
 		}
-		if(!ignoreclick)
-			GtkButtonEvent(msecs(clicktime) < 250 ? DOUBLE : DOWN);
-		clicktime = msecs();
+		
+		if(!ignoreclick) {
+			bool dbl = msecs(clicktime) < 250;
+			clicktime = dbl ? clicktime - 1000 : msecs();
+			GtkButtonEvent(dbl ? DOUBLE : DOWN);
+		}
 		break;
 /*	case GDK_2BUTTON_PRESS:
 		if(!ignoreclick)
