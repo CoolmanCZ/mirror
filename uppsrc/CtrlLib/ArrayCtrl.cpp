@@ -518,19 +518,24 @@ void  ArrayCtrl::Set(int i, Vector<Value>&& v) {
 	WhenArrayAction();
 }
 
-void ArrayCtrl::AfterSet(int i)
+void ArrayCtrl::AfterSet(int i, bool sync_ctrls)
 {
 	SetSb();
 	Refresh();
 	SyncInfo();
-	SyncLineCtrls(i);
+	if(sync_ctrls)
+		SyncLineCtrls(i);
 	InvalidateCache(i);
 }
 
 void ArrayCtrl::Set(int i, int ii, const Value& v)
 {
 	Set0(i, ii, v);
-	AfterSet(i);
+	bool sync_ctrls = false;
+	for(int col : FindColumnsWithPos(ii))
+		if(IsCtrl(i, col))
+			sync_ctrls = true;
+	AfterSet(i, sync_ctrls);
 	WhenArrayAction();
 }
 
@@ -1153,6 +1158,23 @@ int ArrayCtrl::FindColumnWithId(const Id& id) const
 	return FindColumnWithPos(GetPos(id));
 }
 
+Vector<int> ArrayCtrl::FindColumnsWithPos(int pos) const
+{
+	Vector<int> r;
+	for(int i = 0; i < column.GetCount(); i++) {
+		const Mitor<int>& m = column[i].pos;
+		for(int j = 0; j < m.GetCount(); j++)
+			if(Pos(m[j]) == pos)
+				r.Add(i);
+	}
+	return r;
+}
+
+Vector<int> ArrayCtrl::FindColumnsWithId(const Id& id) const
+{
+	return FindColumnsWithPos(GetPos(id));
+}
+
 ArrayCtrl::IdInfo& ArrayCtrl::AddCtrl(Ctrl& ctrl) {
 	IdInfo& f = AddIndex();
 	AddCtrlAt(idx.GetCount() - 1, ctrl);
@@ -1333,7 +1355,7 @@ void ArrayCtrl::ClearModify() {
 		control[i].ctrl->ClearModify();
 }
 
-bool ArrayCtrl::AcceptRow() {
+bool ArrayCtrl::AcceptRow(bool endedit) {
 	ASSERT(IsCursor());
 	if(acceptingrow) // prevent recursion
 		return true;
@@ -1342,7 +1364,7 @@ bool ArrayCtrl::AcceptRow() {
 		Column& m = column[i];
 		if(m.edit && !m.edit->Accept())
 			return false;
-		if(IsCtrl(cursor, i)) {
+		if(IsCtrl(cursor, i) && !endedit) {
 			Ctrl *c =  GetCellCtrl(cursor, i).ctrl;
 			acceptingrow++;
 			bool b = c->Accept();
@@ -1363,7 +1385,8 @@ bool ArrayCtrl::AcceptRow() {
 	}
 	bool b = editmode;
 	EndEdit();
-	SetCtrls();
+	if(!endedit)
+		SetCtrls();
 	ClearModify();
 	if(b)
 		WhenAcceptEdit();
@@ -1665,7 +1688,7 @@ void ArrayCtrl::DoPoint(Point p, bool dosel) {
 		SetCursor0(clickpos.y, dosel);
 	else
 	if(IsCursor())
-		AcceptRow();
+		AcceptRow(true); // true not to reenable ctrls
 	if(!HasFocusDeep())
 		SetWantFocus();
 }
