@@ -253,6 +253,8 @@ void Ctrl::GEvent::operator=(const GEvent& e)
 	Set(e);
 }
 
+static Point s_mousepos;
+
 Point Ctrl::GetMouseInfo(GdkWindow *win, GdkModifierType& mod)
 {
 #if GTK_CHECK_VERSION(3, 20, 0)
@@ -260,7 +262,7 @@ Point Ctrl::GetMouseInfo(GdkWindow *win, GdkModifierType& mod)
 	GdkDevice *pointer = gdk_seat_get_pointer (gdk_display_get_default_seat (display));
 	double x, y;
 	gdk_window_get_device_position_double (win, pointer, &x, &y, &mod);
-	return Point((int)SCL(x), (int)SCL(y));
+	return s_mousepos; //return Point((int)SCL(x), (int)SCL(y));
 #else
 	gint x, y;
 	gdk_window_get_pointer(win, &x, &y, &mod);
@@ -278,6 +280,10 @@ void Ctrl::AddEvent(gpointer user_data, int type, const Value& value, GdkEvent *
 	e.value = value;
 	GdkModifierType mod;
 	e.mousepos = GetMouseInfo(gdk_get_default_root_window(), mod);
+	if(event && event->type == GDK_MOTION_NOTIFY){
+		GdkEventMotion *mevent = (GdkEventMotion *)event;
+		e.mousepos = s_mousepos = Point(SCL(mevent->x_root), SCL(mevent->y_root));
+	}
 	e.state = (mod & ~(GDK_BUTTON1_MASK|GDK_BUTTON2_MASK|GDK_BUTTON3_MASK)) | MouseState;
 	e.count = 1;
 	e.event = NULL;
@@ -287,27 +293,33 @@ void Ctrl::AddEvent(gpointer user_data, int type, const Value& value, GdkEvent *
 		e.pen = true;
 		e.pen_barrel = MouseState & GDK_BUTTON3_MASK;
 		double *axes = NULL;
-		if(event->type == GDK_MOTION_NOTIFY)
-			axes = ((GdkEventMotion *)event)->axes;
-		if(findarg(event->type, GDK_BUTTON_PRESS, GDK_2BUTTON_PRESS, GDK_3BUTTON_PRESS, GDK_BUTTON_RELEASE) >= 0)
-			axes = ((GdkEventButton *)event)->axes;
+		switch(event->type){
+			case GDK_BUTTON_PRESS:
+				gdk_window_set_event_compression(((GdkEventButton *)event)->window, false);
+			case GDK_2BUTTON_PRESS:
+			case GDK_3BUTTON_PRESS:
+				axes = ((GdkEventButton *)event)->axes;
+				break;
+			case GDK_BUTTON_RELEASE:
+				gdk_window_set_event_compression(((GdkEventButton *)event)->window, true);
+				axes = ((GdkEventButton *)event)->axes;
+				break;
+			case GDK_MOTION_NOTIFY:{
+				GdkEventMotion *mevent = (GdkEventMotion *)event;
+				e.mousepos = s_mousepos = Point(SCL(mevent->x_root), SCL(mevent->y_root));
+				axes = ((GdkEventMotion *)event)->axes;
+				break;
+			}
+			default:;
+		}
 		if(axes) {
-			GdkAxisFlags flags = gdk_device_get_axes (d);
-			if(flags & GDK_AXIS_FLAG_PRESSURE) gdk_device_get_axis(d, axes, GDK_AXIS_PRESSURE, &e.pen_pressure);
-			if(flags & GDK_AXIS_FLAG_ROTATION) gdk_device_get_axis(d, axes, GDK_AXIS_ROTATION, &e.pen_rotation);
-			if(flags & GDK_AXIS_FLAG_XTILT) gdk_device_get_axis(d, axes, GDK_AXIS_XTILT, &e.pen_tilt.x);
-			if(flags & GDK_AXIS_FLAG_YTILT) gdk_device_get_axis(d, axes, GDK_AXIS_YTILT, &e.pen_tilt.y);
+			if(!gdk_device_get_axis(d, axes, GDK_AXIS_PRESSURE, &e.pen_pressure)) e.pen_pressure=Null;
+			if(!gdk_device_get_axis(d, axes, GDK_AXIS_ROTATION, &e.pen_rotation)) e.pen_rotation=Null;
+			if(!gdk_device_get_axis(d, axes, GDK_AXIS_XTILT, &e.pen_tilt.x)) e.pen_tilt.x=Null;
+			if(!gdk_device_get_axis(d, axes, GDK_AXIS_YTILT, &e.pen_tilt.y)) e.pen_tilt.y=Null;
 		}
 	}
 #endif
-	if(event) {
-		e.time = gdk_event_get_time(event);
-		e.event = gdk_event_copy(event);
-	}
-	else {
-		e.time = gtk_get_current_event_time();
-		e.event = gtk_get_current_event();
-	}
 }
 
 void Ctrl::IMCommit(GtkIMContext *context, gchar *str, gpointer user_data)
@@ -334,13 +346,9 @@ void Ctrl::FetchEvents(bool may_block)
 {
 	LLOG("FetchEvents " << may_block);
 	int level = LeaveGuiMutexAll();
-	while(g_main_context_iteration(NULL, may_block)) {
+	while(g_main_context_iteration(NULL, may_block))
 		may_block = false;
-		ProcessInvalids();
-	}
-	ProcessInvalids();
 	EnterGuiMutex(level);
-	ProcessInvalids();
 }
 
 bool Ctrl::IsWaitingEvent0(bool fetch)
@@ -667,7 +675,7 @@ bool Ctrl::ProcessEvent0(bool *quit, bool fetch)
 			    if(a.type == GDK_SCROLL)
 			        b.value = (int)b.value + (int)a.value;
 				else
-				if(findarg(a.type, GDK_MOTION_NOTIFY, GDK_CONFIGURE) < 0)
+				if(a.type != GDK_CONFIGURE)
 					break;
 				Events.DropHead();
 			}
