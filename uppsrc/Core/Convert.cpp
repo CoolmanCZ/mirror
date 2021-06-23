@@ -2,6 +2,8 @@
 
 namespace Upp {
 
+double ipow10_table[601];
+
 unsigned stou(const char *s, void *endptr, unsigned base)
 {
 	ASSERT(base >= 2 && base <= 36);
@@ -114,77 +116,93 @@ int64 ScanInt64(const char *ptr, const char **endptr, int base)
 		return Null;
 }
 
-template <class T>
-double ScanDoubleT(const T *p, const T **endptr, bool accept_comma)
+int ScanInt(const char *ptr, const char **endptr)
 {
-	const T *begin = p;
-	while(*p && (byte)*p <= ' ')
-		p++;
-	bool neg = false;
-	if(endptr)
-		*endptr = p;
-	if(*p == '+' || *p == '-')
-		neg = (*p++ == '-');
-	if((byte)(*p - '0') >= 10 && !((*p == '.' || accept_comma && *p == ',') && (byte)(p[1] - '0') < 10)) {
-		if(endptr) *endptr = begin;
-		return Null;
-	}
-	double mantissa = 0;
-	T c;
-	int exp = 0;
-	while((byte)(*p - '0') < 10)
-		if((c = *p++) != '0') {
-			if(exp) { mantissa *= ipow10(exp); exp = 0; }
-			mantissa = 10 * mantissa + c - '0';
-		}
-		else
-			exp++;
-	int raise = exp;
-	if(*p == '.' || accept_comma && *p == ',') // decimal part
-		while((byte)((c = *++p) - '0') < 10) {
-			if(c != '0') {
-				if(raise) {
-					mantissa *= ipow10(raise);
-					exp -= raise;
-					raise = 0;
-				}
-				exp--;
-				mantissa = 10 * mantissa + c - '0';
-				if(!IsFin(mantissa))
-					return Null;
-			}
-			else
-				raise++;
-		}
-	if(*p == 'E' || *p == 'e') { // exponent
-		int vexp = ScanInt(p + 1, &p);
-		if(IsNull(vexp))
-			return Null;
-		exp += vexp;
-	}
-	if(endptr) *endptr = p;
-	if(exp) {
-		double e = ipow10(tabs(exp));
-		mantissa = (exp > 0 ? mantissa * e : mantissa / e);
-	}
-	if(!IsFin(mantissa))
-		return Null;
-	return neg ? -mantissa : mantissa;
+	int x;
+	bool overflow = false;
+	ptr = ScanInt<char, byte, uint32, int, 10>(x, ptr, overflow);
+	if(ptr && endptr)
+		*endptr = ptr;
+	return !overflow && ptr ? x : Null;
 }
 
-double ScanDouble(const char *p, const char **endptr, bool accept_comma)
+int ScanInt(const char *ptr)
 {
-	return ScanDoubleT(p, endptr, accept_comma);
+	int x;
+	bool overflow = false;
+	return ScanInt<char, byte, uint32, int, 10>(x, ptr, overflow) && !overflow ? x : Null;
 }
 
-double ScanDouble(const wchar *p, const wchar **endptr, bool accept_comma)
+int64 ScanInt64(const char *ptr, const char **endptr)
 {
-	return ScanDoubleT(p, endptr, accept_comma);
+	int64 x;
+	bool overflow = false;
+	ptr = ScanInt<char, byte, uint64, int64, 10>(x, ptr, overflow);
+	if(ptr && endptr)
+		*endptr = ptr;
+	return !overflow && ptr ? x : Null;
+}
+
+int64 ScanInt64(const char *ptr)
+{
+	int64 x;
+	bool overflow = false;
+	return ScanInt<char, byte, uint64, int64, 10>(x, ptr, overflow) && !overflow ? x : Null;
+}
+
+double ScanDouble(const char *ptr, const char **endptr, bool accept_comma)
+{
+	double n;
+	ptr = ScanDbl<char, byte>(n, ptr, accept_comma ? ',' : '.');
+	if(ptr && endptr)
+		*endptr = ptr;
+	return ptr ? n : Null;
+}
+
+double ScanDouble(const wchar *ptr, const wchar **endptr, bool accept_comma)
+{
+	double n;
+	ptr = ScanDbl<wchar, word>(n, ptr, accept_comma ? ',' : '.');
+	if(ptr && endptr)
+		*endptr = ptr;
+	return ptr ? n : Null;
+}
+
+double ScanDouble(const char *ptr, const char **endptr)
+{
+	double n;
+	ptr = ScanDbl<char, byte>(n, ptr, ',');
+	if(ptr && endptr)
+		*endptr = ptr;
+	return ptr ? n : Null;
+}
+
+double ScanDouble(const wchar *ptr, const wchar **endptr)
+{
+	double n;
+	ptr = ScanDbl<wchar, word>(n, ptr, ',');
+	if(ptr && endptr)
+		*endptr = ptr;
+	return ptr ? n : Null;
+}
+
+double ScanDouble(const char *ptr)
+{
+	double n;
+	ptr = ScanDbl<char, byte>(n, ptr, ',');
+	return ptr ? n : Null;
+}
+
+double ScanDouble(const wchar *ptr)
+{
+	double n;
+	return ScanDbl<wchar, word>(n, ptr, ',') ? n : Null;
 }
 
 double Atof(const char *s)
 {
-	return Nvl(ScanDouble(s));
+	double n;
+	return ScanDbl<char, byte>(n, s, ',') ? n : 0;
 }
 
 Value StrIntValue(const char *s)
